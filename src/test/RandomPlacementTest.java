@@ -21,9 +21,8 @@ public class RandomPlacementTest {
 
     // Number of boards to generate for statistical validation
     private static final int NUM_BOARDS = 1000;
-    
-    // Tolerance for statistical validation (percentage)
-    // We allow a small variance due to randomness, but expect very close matches
+
+    // Allowed percentage deviation when comparing observed averages to expected values
     private static final double TOLERANCE_PERCENT = 2.0; // 2% tolerance
 
     public static void main(String[] args) {
@@ -33,7 +32,7 @@ public class RandomPlacementTest {
 
         boolean allTestsPassed = true;
 
-        // Test each difficulty level
+        // Run the placement test for each difficulty level
         allTestsPassed &= testDifficulty(Difficulty.EASY);
         allTestsPassed &= testDifficulty(Difficulty.MEDIUM);
         allTestsPassed &= testDifficulty(Difficulty.HARD);

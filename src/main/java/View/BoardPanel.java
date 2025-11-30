@@ -8,8 +8,8 @@ import java.awt.event.MouseAdapter; // NEW
 import java.awt.event.MouseEvent;   // NEW
 
 /**
- * Shows a single board (for one player).
- * לא מכיר בכלל את Board / Cell / Game – רק GameController.
+ * View component for a single player's board.
+ * Displays a grid of buttons and interacts only with GameController (not with the Model directly).
  */
 public class BoardPanel extends JPanel {
 
@@ -19,7 +19,7 @@ public class BoardPanel extends JPanel {
 
     private JButton[][] buttons;
     private JLabel waitLabel;
-    private boolean waiting;         // true = "WAIT FOR YOUR TURN"
+    private boolean waiting;         // true = this player is currently not allowed to play
 
     public BoardPanel(GameController controller,
                       int boardNumber,
@@ -32,7 +32,9 @@ public class BoardPanel extends JPanel {
 
         initComponents();
     }
-
+    /**
+     * Builds the board UI: grid of buttons + overlay label for "WAIT FOR YOUR TURN".
+     */
     private void initComponents() {
         int rows = controller.getBoardRows(boardNumber);
         int cols = controller.getBoardCols(boardNumber);
@@ -100,23 +102,23 @@ public class BoardPanel extends JPanel {
         if (waiting) return;
 
         if (isFlagging) {
-            // Right-click → דגלים רק על תאים סגורים
+            // Right-click: only flag non-revealed cells
             if (!controller.isCellRevealed(boardNumber, r, c)) {
                 controller.toggleFlagUI(boardNumber, r, c);
             }
         } else {
-            // LEFT CLICK
+            // Left-click: reveal cell
 
             boolean wasRevealed = controller.isCellRevealed(boardNumber, r, c);
 
-            // 1) אם התא לא היה נחשף → קודם נחשוף אותו (כולל קסקדה אם צריך)
+            // 1) If the cell was hidden, reveal it (including cascade if needed)
             if (!wasRevealed) {
                 controller.revealCellUI(boardNumber, r, c);
-                // נרענן כדי שהשחקן יראה את ה-Q/S לפני החלון
+                // Refresh to show QUESTION/SURPRISE before asking activation
                 refresh();
             }
 
-            // 2) אם התא הוא QUESTION/SURPRISE → אפשר לשאול על הפעלה
+            // 2) If the cell is QUESTION/SURPRISE → ask player whether to activate it
             if (controller.isQuestionOrSurprise(boardNumber, r, c)) {
                 int choice = JOptionPane.showConfirmDialog(
                         this,
@@ -131,7 +133,7 @@ public class BoardPanel extends JPanel {
             }
         }
 
-        // רענון סופי אחרי הפעלה/דגל/חשיפה
+        // Final refresh after reveal/flag/activation
         refresh();
 
         if (moveCallback != null) {
@@ -142,7 +144,7 @@ public class BoardPanel extends JPanel {
 
 
     /**
-     * Called by GamePanel when the turn changes.
+     * Updates the "waiting" state for this board (used when the turn changes).
      */
     public void setWaiting(boolean waiting) {
         this.waiting = waiting;
@@ -150,9 +152,8 @@ public class BoardPanel extends JPanel {
             waitLabel.setVisible(waiting);
         }
     }
-
     /**
-     * Repaint buttons according to cell state/content via controller.
+     * Refreshes the visual state of all buttons according to the controller's cell view data.
      */
     public void refresh() {
         int rows = controller.getBoardRows(boardNumber);

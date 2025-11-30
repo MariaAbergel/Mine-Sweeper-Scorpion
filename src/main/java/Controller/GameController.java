@@ -8,12 +8,25 @@ import Model.GameState;
 
 /**
  * Controller class between the UI (View) and the Game model.
- * All communication between View and Model should pass through here.
+ * All communication between View and Model pass through here.
  */
 public class GameController {
 
-    private Game currentGame;
+    // Singleton pattern – ensures only one controller exists for the whole app
+    private static GameController instance;
 
+    private Game currentGame;
+    // Private constructor – prevents external instantiation
+
+    private GameController() {
+    }
+    // Returns the single shared Controller instance
+    public static GameController getInstance() {
+        if (instance == null) {
+            instance = new GameController();
+        }
+        return instance;
+    }
     /**
      * Creates a new Game instance with the selected difficulty.
      * This is the main entry point for starting a cooperative game.
@@ -48,30 +61,28 @@ public class GameController {
 
     /**
      * Returns the current Game instance.
-     * NOTE: Views should avoid using this directly – it's mostly for tests or debugging.
      */
     public Game getCurrentGame() {
         return currentGame;
     }
 
-    // ======================================================
-    //  GAME STATE / TURN INFO FOR THE VIEW
-    // ======================================================
+
+    // Returns true if a game exists and is currently in RUNNING state.
 
     public boolean isGameRunning() {
         return currentGame != null && currentGame.getGameState() == GameState.RUNNING;
     }
-
+    // Returns true if the game has ended with WIN or LOSS.
     public boolean isGameOver() {
         if (currentGame == null) return false;
         GameState state = currentGame.getGameState();
         return state == GameState.WON || state == GameState.LOST;
     }
-
+    // Returns the current player's turn
     public int getCurrentPlayerTurn() {
         return (currentGame != null) ? currentGame.getCurrentPlayerTurn() : 0;
     }
-
+    // Switches turn between players.
     public void switchTurn() {
         if (currentGame != null) {
             currentGame.switchTurn();
@@ -96,25 +107,23 @@ public class GameController {
         return currentGame.getDifficulty().getStartingLives();
     }
 
-    // ======================================================
-    //  BOARD-LEVEL INFO FOR THE VIEW
-    // ======================================================
 
+    // Returns board instance based on board number
     private Board getBoard(int boardNumber) {
         if (currentGame == null) return null;
         return (boardNumber == 1) ? currentGame.getBoard1() : currentGame.getBoard2();
     }
-
+    // Returns the number of rows for the specified board.
     public int getBoardRows(int boardNumber) {
         Board b = getBoard(boardNumber);
         return (b != null) ? b.getRows() : 0;
     }
-
+    // Returns the number of columns for the specified board.
     public int getBoardCols(int boardNumber) {
         Board b = getBoard(boardNumber);
         return (b != null) ? b.getCols() : 0;
     }
-
+    // Returns the total number of mines placed on the specified board.
     public int getTotalMines(int boardNumber) {
         Board b = getBoard(boardNumber);
         return (b != null) ? b.getTotalMines() : 0;
@@ -145,10 +154,6 @@ public class GameController {
         return Math.max(remaining, 0);
     }
 
-    // ======================================================
-    //  CELL-LEVEL OPERATIONS FOR THE VIEW
-    // ======================================================
-
     /**
      * Used by the UI to reveal a cell following MVC (View -> Controller -> Model).
      * This delegates to Board.revealCell, which contains the game logic.
@@ -168,7 +173,7 @@ public class GameController {
     }
 
     /**
-     * 🔥 NEW: Used by the UI (right-click) to toggle the flag state of a cell.
+     * Used by the UI (right-click) to toggle the flag state of a cell.
      * This delegates to Board.toggleFlag, which contains the game logic and scoring.
      */
     public void toggleFlagUI(int boardNumber, int row, int col) {
@@ -187,8 +192,7 @@ public class GameController {
 
 
     /**
-     * Returns display data for a single cell.
-     * The View uses only this (text + enabled) and לא נוגעת ב-Cell / Board.
+     * Provides UI-only cell data (text + enabled state) without exposing Model internals.
      */
     public CellViewData getCellViewData(int boardNumber, int row, int col) {
         Board board = getBoard(boardNumber);
@@ -270,20 +274,12 @@ public class GameController {
         }
     }
 
-    // ======================================================
-    //  ORIGINAL REVEAL LOGIC (כמו שהיה אצלך) – לא נוגעת בו
-    // ======================================================
-
     /**
      * Reveals a cell on the specified board.
      * For question and surprise cells, this method:
      * - Checks if the cell was already used
      * - If already used, skips the special effect and does nothing
      * - If not used, marks it as used and triggers the special effect
-     *
-     * NOTE: This method נשאר כמו שהוא, כדי לא לשנות לוגיקה קיימת.
-     * כרגע ה-View משתמש ב-revealCellUI, אבל אפשר להשתמש גם בזה אם תצטרכי.
-     *
      * @param boardNumber 1 for board1, 2 for board2
      * @param row the row index of the cell
      * @param col the column index of the cell

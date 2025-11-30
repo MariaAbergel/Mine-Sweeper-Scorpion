@@ -62,7 +62,7 @@ public class GameLogicAcceptanceTest {
     private static void testA_StartPhase() {
         System.out.println("=== START TEST ===");
 
-        GameController controller = new GameController();
+        GameController controller = GameController.getInstance();
         controller.startNewGame(Difficulty.EASY);
         Game game = controller.getCurrentGame();
 
@@ -525,7 +525,8 @@ public class GameLogicAcceptanceTest {
     // ============================================================
 
     /**
-     * Clears the entire board (not just 5x5) to ensure deterministic tests
+     * Clears the entire board to a deterministic state:
+     * all cells empty, hidden, with 0 adjacent mines and not used.
      */
     private static void clearBoard(Board board) {
         for (int r = 0; r < board.getRows(); r++) {
@@ -540,7 +541,10 @@ public class GameLogicAcceptanceTest {
             }
         }
     }
-
+    /**
+     * Sets up a specific board layout for recursive reveal testing.
+     * Only a 5x5 area (0..4, 0..4) is used for assertions.
+     */
     private static void configureRevealTestBoard(Board board) {
         board.getCell(0, 4).setContent(Cell.CellContent.MINE);
         board.getCell(4, 0).setContent(Cell.CellContent.MINE);
@@ -551,17 +555,27 @@ public class GameLogicAcceptanceTest {
         calculateAdjacentMines(board, 3, 1);
         calculateAdjacentMines(board, 4, 1);
     }
-
+    /**
+     * Sets up a board with:
+     * - a mine at (0,0),
+     * - a QUESTION cell at (1,1) with id=1,
+     * used for scoring and flag tests.
+     */
     private static void configureScoringTestBoard(Board board) {
         board.getCell(0, 0).setContent(Cell.CellContent.MINE);
         board.getCell(1, 1).setContent(Cell.CellContent.QUESTION);
         board.getCell(1, 1).setQuestionId(1);
     }
-
+    /**
+     * Sets one mine on the board for lose-condition tests.
+     */
     private static void configureLoseTestBoard(Board board) {
         board.getCell(2, 2).setContent(Cell.CellContent.MINE);
     }
-
+    /**
+     * Puts a small number of mines on the board so that
+     * most cells are safe and can be revealed for win scoring tests.
+     */
     private static void configureWinTestBoard(Board board) {
         board.getCell(0, 0).setContent(Cell.CellContent.MINE);
         board.getCell(4, 4).setContent(Cell.CellContent.MINE);
@@ -606,7 +620,9 @@ public class GameLogicAcceptanceTest {
     // ============================================================
     // Helper Methods for Display and Testing
     // ============================================================
-
+    /**
+     * Prints a 5x5 view of the board (state + content) for debugging.
+     */
     private static void printBoardState(Board board) {
         System.out.println("\n   ");
         for (int c = 0; c < TEST_SIZE; c++) {
@@ -659,7 +675,9 @@ public class GameLogicAcceptanceTest {
         }
         System.out.println();
     }
-
+    /**
+     * Prints a single check result line and returns the condition value.
+     */
     private static boolean check(String description, boolean condition) {
         if (condition) {
             System.out.println("[PASS] " + description);
@@ -668,7 +686,9 @@ public class GameLogicAcceptanceTest {
         }
         return condition;
     }
-
+    /**
+     * Prints a summary for a logical test block.
+     */
     private static void printTestResult(String testName, boolean allPassed) {
         System.out.println("\n" + testName + " RESULT: " +
                 (allPassed ? "ALL CHECKS PASSED" : "SOME CHECKS FAILED"));
