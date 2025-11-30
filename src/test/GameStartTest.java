@@ -5,9 +5,15 @@ import Model.Difficulty;
 import Model.Game;
 
 public class GameStartTest {
-
+    /**
+     * Simple console-based test class for game startup and core rules.
+     * Verifies:
+     * - Game initialization by difficulty
+     * - Restart logic (reset of lives, score and boards)
+     * - Basic rule behavior: flagging mines/safe cells and revealing mines.
+     */
     public static void main(String[] args) {
-        GameController controller = new GameController();
+        GameController controller = GameController.getInstance();
 
         // =============================================================
         // PART 1: Initialization & Restart Tests
@@ -38,7 +44,7 @@ public class GameStartTest {
         check("Shared lives == EASY startingLives",
                 game.getSharedLives() == Difficulty.EASY.getStartingLives());
         check("Shared score starts at 0", game.getSharedScore() == 0);
-
+        // Mutate game state to verify restart logic
         game.setSharedLives(game.getSharedLives() - 3);
         game.setSharedScore(25);
         Board oldBoard1 = game.getBoard1();
@@ -106,7 +112,9 @@ public class GameStartTest {
     // -------------------------------------------------------------
     // Helper Methods
     // -------------------------------------------------------------
-
+    /**
+     * Prints a PASS/FAIL line for a single condition.
+     */
     private static void check(String description, boolean condition) {
         if (condition) {
             System.out.println("[PASS] " + description);
@@ -114,7 +122,10 @@ public class GameStartTest {
             System.out.println("[FAIL] " + description);
         }
     }
-
+    /**
+     * Finds the first cell on the board that matches the given content type.
+     * Returns null if no such cell exists.
+     */
     private static Cell findCellWithContent(Board board, Cell.CellContent type) {
         for (int r = 0; r < board.getRows(); r++) {
             for (int c = 0; c < board.getCols(); c++) {

@@ -151,7 +151,8 @@ public class UsedCellTest {
     private static boolean testGameControllerIntegration() {
         System.out.println("=== Test: GameController Integration ===\n");
         
-        GameController controller = new GameController();
+        GameController controller = GameController.getInstance();
+
         controller.startNewGame(Difficulty.EASY);
         Game game = controller.getCurrentGame();
         Board board = game.getBoard1();

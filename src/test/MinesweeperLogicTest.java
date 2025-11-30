@@ -3,8 +3,15 @@ import Model.Cell;
 import Model.Difficulty;
 import Model.Game;
 
+/**
+ * Manual console test suite for the Board.revealCell recursion logic.
+ * Covers:
+ * - Cascading reveal of EMPTY cells and boundary NUMBER cells
+ * - Behavior when revealing NUMBER, MINE and FLAGGED cells
+ * - Recursion boundary conditions with flagged and pre-revealed cells.
+ */
 public class MinesweeperLogicTest {
-
+    // Size of the printed test area (top-left 5x5 part of the board)
     private static final int TEST_SIZE = 5;
 
     public static void main(String[] args) {
@@ -380,7 +387,9 @@ public class MinesweeperLogicTest {
         calculateAdjacentMines(board, 1, 2);
         calculateAdjacentMines(board, 2, 2);
     }
-
+    /**
+     * Calculates NUMBER value for a specific cell based on surrounding mines.
+     */
     private static void calculateAdjacentMines(Board board, int r, int c) {
         int count = 0;
         for (int i = -1; i <= 1; i++) {
@@ -404,7 +413,9 @@ public class MinesweeperLogicTest {
     // ============================================================
     // Helper Methods for Display and Testing
     // ============================================================
-
+    /**
+     * Prints the top-left TEST_SIZE x TEST_SIZE area of the board (state + content).
+     */
     private static void printBoardState(Board board) {
         int rows = Math.min(TEST_SIZE, board.getRows());
         int cols = Math.min(TEST_SIZE, board.getCols());
@@ -455,7 +466,9 @@ public class MinesweeperLogicTest {
         }
         System.out.println();
     }
-
+    /**
+     * Prints [PASS]/[FAIL] and returns the condition (for accumulating results).
+     */
     private static boolean check(String description, boolean condition) {
         if (condition) {
             System.out.println("[PASS] " + description);
@@ -464,7 +477,9 @@ public class MinesweeperLogicTest {
         }
         return condition;
     }
-
+    /**
+     * Prints a short summary line for each test block.
+     */
     private static void printTestResult(String testName, boolean allPassed) {
         System.out.println("\n" + testName + " RESULT: "
                 + (allPassed ? "ALL CHECKS PASSED" : "SOME CHECKS FAILED"));
