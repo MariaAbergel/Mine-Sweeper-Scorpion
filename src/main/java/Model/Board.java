@@ -156,22 +156,35 @@ public class Board {
     /**
      * Toggles flag state and applies points based on rule.
      * SRS 3.1.1: Mine +1pt, Non-Mine -3pts.
+     * This method must be VOID or return only if the action was successful for the Controller's logic to work.
      */
-    public void toggleFlag ( int r, int c){
-        if (!isValid(r, c) || game.getGameState() != GameState.RUNNING) return;
+    public void toggleFlag(int r, int c) { // 🔥 Changed to VOID
+        if (!isValid(r, c) || cells[r][c].isRevealed() || game.getGameState() != GameState.RUNNING) return;
 
         Cell cell = cells[r][c];
-        boolean isNowFlagged = cell.toggleFlag();
 
-        if (isNowFlagged) {
-            if (cell.isMine()) {
-                // CORRECTED: Use Difficulty value (+1pt)
-                game.setSharedScore(game.getSharedScore() + game.getDifficulty().getMineFlagReward());
+        // Determine the state *before* toggling
+        boolean wasFlagged = cell.isFlagged();
+
+        // Toggle the flag (returns true if the state changed successfully)
+        boolean stateChanged = cell.toggleFlag();
+
+        if (stateChanged) {
+            if (!wasFlagged) {
+                // Case 1: Flag was SET (HIDDEN -> FLAGGED) - This ends the turn.
+                if (cell.isMine()) {
+                    game.setSharedScore(game.getSharedScore() + game.getDifficulty().getMineFlagReward());
+                } else {
+                    game.setSharedScore(game.getSharedScore() + game.getDifficulty().getNonMineFlagPenalty());
+                }
+                // No return true/false here, as the Controller handles the turn switch logic using isFlagged() checks.
+
             } else {
-                // CORRECTED: Use Difficulty value (-3pts)
-                game.setSharedScore(game.getSharedScore() + game.getDifficulty().getNonMineFlagPenalty());
+                // Case 2: Flag was UNSET (FLAGGED -> HIDDEN) - Correction move.
+                // No score reversal is implemented here, just the state change.
             }
         }
+        // No explicit return statement is needed now.
     }
 
     /**
@@ -239,6 +252,16 @@ public class Board {
             }
         }
     }
+
+    /**
+     * 🔥 NEW: Helper method for the Controller to check flag status (Fixes error #2 in Controller).
+     */
+    public boolean isFlagged(int r, int c) {
+        if (r < 0 || r >= rows || c < 0 || c >= cols) return false;
+        // Assuming 'cells' is the array of Cell objects
+        return cells[r][c].isFlagged();
+    }
+
     // --- Getters ---
 
     public int getSafeCellsRemaining () {

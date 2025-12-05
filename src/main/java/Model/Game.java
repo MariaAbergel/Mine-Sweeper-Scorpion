@@ -12,6 +12,9 @@ public class Game {
     private GameState gameState;
     private int currentPlayerTurn;
 
+    // 🔥 NEW ADDITION 1: Field to store the message for the View
+    private String lastActionMessage;
+
     public enum QuestionLevel { EASY, MEDIUM, HARD, EXPERT }
 
     public Game(Difficulty difficulty) {
@@ -24,6 +27,7 @@ public class Game {
         this.sharedScore = 0;
         this.gameState = GameState.RUNNING;
         this.currentPlayerTurn = 1;
+        this.lastActionMessage = null; // Initialize the message field
 
         this.board1 = new Board(difficulty, this);
         this.board2 = new Board(difficulty, this);
@@ -37,19 +41,22 @@ public class Game {
 
     // --- Game Status & End Game Logic ---
 
+    // Inside Model/Game.java
+
     public void checkGameStatus() {
         if (gameState != GameState.RUNNING) return;
 
         // 1. Loss Condition Check (Lives <= 0)
         if (sharedLives <= 0) {
-            this.sharedLives = 0; // Ensure display doesn't show negative lives
+            this.sharedLives = 0;
             gameState = GameState.LOST;
             endGameProcessing();
             return;
         }
 
-        // 2. Win Condition Check (All safe cells cleared)
-        if (board1.getSafeCellsRemaining() == 0 && board2.getSafeCellsRemaining() == 0) {
+        // 2. Win Condition Check (All safe cells cleared on EITHER board)
+        // 🔥 CRITICAL CHANGE: Use OR (||) instead of AND (&&)
+        if (board1.getSafeCellsRemaining() == 0 || board2.getSafeCellsRemaining() == 0) {
             gameState = GameState.WON;
             endGameProcessing();
         }
@@ -146,6 +153,8 @@ public class Game {
 
     public void setSharedScore(int sharedScore) {
         this.sharedScore = sharedScore;
+        // CRITICAL: Ensure every score change checks the win/loss state.
+        checkGameStatus();
     }
 
     public void setGameState(GameState gameState) {
@@ -178,6 +187,7 @@ public class Game {
         }
     }
 
+    // 🔥 MODIFIED METHOD 2: Store the message in the new field
     private void handleSurprise() {
         Random rand = new Random();
         boolean isGoodSurprise = rand.nextBoolean();
@@ -187,13 +197,18 @@ public class Game {
             // Good Surprise: Gained points AND attempted 1 life.
             sharedScore += pointsValue;
             addLife(pointsValue); // Add 1 life (handles cap using pointsValue for conversion)
-            System.out.println("Surprise! Gained " + pointsValue + " points and attempted 1 Life.");
+
+            // Replaced System.out.println with setting the message field
+            this.lastActionMessage = "You gained " + pointsValue + " points and attempted 1 Life!";
         } else {
             // Bad Surprise: Lost points AND lost 1 life.
             sharedScore -= pointsValue;
             deductLife(1); // Lost 1 life (triggers loss check)
-            System.out.println("Surprise! Lost " + pointsValue + " points and 1 Life.");
+
+            // Replaced System.out.println with setting the message field
+            this.lastActionMessage = "You lost " + pointsValue + " points and 1 Life.";
         }
+        // Note: System.out.println is removed here, as the View will now show the message.
     }
 
     public void processQuestionAnswer(QuestionLevel qLevel, boolean isCorrect) {
@@ -297,6 +312,13 @@ public class Game {
     public void switchTurn() {
         if (gameState != GameState.RUNNING) return;
         currentPlayerTurn = (currentPlayerTurn == 1) ? 2 : 1;
+    }
+
+    // 🔥 NEW ADDITION 3: Public method for Controller to retrieve and clear the message
+    public String getAndClearLastActionMessage() {
+        String message = this.lastActionMessage;
+        this.lastActionMessage = null; // Clear the message so it doesn't pop up again
+        return message;
     }
 
     // --- Getters ---

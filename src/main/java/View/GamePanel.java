@@ -178,7 +178,6 @@ public class GamePanel extends JPanel {
         btnExit.addActionListener(e -> SwingUtilities.getWindowAncestor(this).dispose());
         btnRestart.addActionListener(e -> {
             controller.restartGame();
-            // Rebuild hearts and status after restart
             buildHearts();
             updateStatus();
             updateTurnUI();
@@ -232,11 +231,32 @@ public class GamePanel extends JPanel {
 
     /** Called after each move from a BoardPanel. */
     private void handleMoveMade() {
-        if (controller.isGameRunning()) {
-            controller.switchTurn();
-        }
+        // 1. Refresh status (Score, Lives, Mines, Hearts)
         updateStatus();
+
+        // 2. Handle Surprise Pop-up
+        String outcomeMessage = controller.getAndClearLastActionMessage();
+        if (outcomeMessage != null) {
+            displayOutcomePopup(outcomeMessage);
+        }
+
+        // 3. Check if game ended (Win/Loss)
+        if (controller.isGameOver()) {
+            handleGameOverUI();
+            return; // STOP all further execution
+        }
+
+        // 4. Switch turn (only if game is still running)
+        if (controller.isGameRunning()) {
+            controller.processTurnEnd();
+        }
+
+        // 5. Update UI for the new turn
         updateTurnUI();
+
+        // 6. Refresh both boards
+        boardPanel1.refresh();
+        boardPanel2.refresh();
     }
 
     /** Refresh SCORE, LIVES, MINES LEFT, HEARTS. */
@@ -253,11 +273,31 @@ public class GamePanel extends JPanel {
         repaint();
     }
 
-    /** Show “WAIT FOR YOUR TURN” on the board that is not active. */
+    /** Displays the result of the Surprise tile. */
+    private void displayOutcomePopup(String message) {
+        JOptionPane.showMessageDialog(this,
+                message,
+                "SURPRISE TILE ACTIVATED!",
+                JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    /** Show "WAIT FOR YOUR TURN" on the board that is not active. */
     private void updateTurnUI() {
         int current = controller.getCurrentPlayerTurn();  // 1 or 2
         boardPanel1.setWaiting(current != 1);
         boardPanel2.setWaiting(current != 2);
+
+        // Highlight the active player's box
+        if (current == 1) {
+            lblPlayer1Box.setBackground(new Color(90, 90, 110));
+            lblPlayer2Box.setBackground(new Color(60, 60, 80));
+        } else if (current == 2) {
+            lblPlayer1Box.setBackground(new Color(60, 60, 80));
+            lblPlayer2Box.setBackground(new Color(90, 90, 110));
+        } else {
+            lblPlayer1Box.setBackground(new Color(60, 60, 80));
+            lblPlayer2Box.setBackground(new Color(60, 60, 80));
+        }
     }
 
     private void updateHearts() {
@@ -271,6 +311,44 @@ public class GamePanel extends JPanel {
             } else {
                 heart.setForeground(Color.DARK_GRAY);
             }
+        }
+    }
+
+    /** Handles the visual changes and dialog when the game ends. */
+    private void handleGameOverUI() {
+        // 1. Determine Win/Loss Status and Message
+        String status = controller.getCurrentGame().getGameState().name();
+        String finalMessage = String.format(
+                "GAME OVER! Status: %s\nFinal Score: %d\nLives Converted to Bonus Points: Yes",
+                status,
+                controller.getSharedScore()
+        );
+
+        // 2. Disable all buttons
+        boardPanel1.refresh();
+        boardPanel2.refresh();
+
+        // 3. Show the final dialog box
+        int choice = JOptionPane.showConfirmDialog(
+                this,
+                finalMessage,
+                "Game Ended - " + status,
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.INFORMATION_MESSAGE
+        );
+
+        // 4. Handle user choice
+        if (choice == JOptionPane.YES_OPTION) {
+            // User chose to restart
+            controller.restartGame();
+            buildHearts();
+            updateStatus();
+            updateTurnUI();
+            boardPanel1.refresh();
+            boardPanel2.refresh();
+        } else {
+            // User chose to exit
+            SwingUtilities.getWindowAncestor(this).dispose();
         }
     }
 }

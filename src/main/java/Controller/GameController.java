@@ -64,19 +64,16 @@ public class GameController {
 
     public boolean isGameOver() {
         if (currentGame == null) return false;
-        GameState state = currentGame.getGameState();
-        return state == GameState.WON || state == GameState.LOST;
+        // 🔥 FIX 2: A game is "over" if the state is NOT RUNNING (WON or LOST).
+        return currentGame.getGameState() != GameState.RUNNING;
     }
 
     public int getCurrentPlayerTurn() {
         return (currentGame != null) ? currentGame.getCurrentPlayerTurn() : 0;
     }
 
-    public void switchTurn() {
-        if (currentGame != null) {
-            currentGame.switchTurn();
-        }
-    }
+    // 🔥 REMOVED direct switchTurn() access for the View.
+    // The View must now call processTurnEnd() instead.
 
     public String getDifficultyName() {
         if (currentGame == null || currentGame.getDifficulty() == null) return "";
@@ -95,6 +92,39 @@ public class GameController {
         if (currentGame == null || currentGame.getDifficulty() == null) return 0;
         return currentGame.getDifficulty().getStartingLives();
     }
+    //new method for GUI surprise popups
+
+    public String getAndClearLastActionMessage() {
+        if (currentGame != null) {
+            // ASSUMES: Model.Game has a method to return and clear the last action message.
+            // You MUST implement this method in Model.Game.java for this to work.
+            return currentGame.getAndClearLastActionMessage();
+        }
+        return null;
+    }
+    // ======================================================
+    //  TURN MANAGEMENT AND FLAG CLEARING (CRITICAL FIX FOR BUG 1)
+    // ======================================================
+
+    /**
+     * Handles the logic of whether the current turn ends and switches players.
+     * This MUST be called at the end of every successful player action.
+     */
+    /**
+     * Handles switching turns. Called after actions that should end the turn.
+     * 🔥 FIX: Simplified - just switches turn if game is running.
+     */
+    /**
+     * Handles switching turns. Called after actions that should end the turn.
+     * 🔥 SIMPLIFIED: Just switches turn if game is running.
+     */
+    public void processTurnEnd() {
+        if (currentGame == null || currentGame.getGameState() != GameState.RUNNING) return;
+
+        // Simply switch the turn
+        currentGame.switchTurn();
+    }
+
 
     // ======================================================
     //  BOARD-LEVEL INFO FOR THE VIEW
@@ -151,26 +181,29 @@ public class GameController {
 
     /**
      * Used by the UI to reveal a cell following MVC (View -> Controller -> Model).
-     * This delegates to Board.revealCell, which contains the game logic.
      */
-    public boolean revealCellUI(int boardNumber, int row, int col) {
-        if (currentGame == null || !isGameRunning()) return false;
+    public void revealCellUI(int boardNumber, int row, int col) { // 🔥 Must be VOID
+        if (currentGame == null || !isGameRunning()) return;
 
         Board board = getBoard(boardNumber);
-        if (board == null) return false;
+        if (board == null) return;
 
         if (row < 0 || row >= board.getRows() || col < 0 || col >= board.getCols()) {
-            return false;
+            return;
         }
 
+        // This method must call board.revealCell()
         board.revealCell(row, col);
-        return true;
     }
 
     /**
-     * 🔥 NEW: Used by the UI (right-click) to toggle the flag state of a cell.
+     * Used by the UI (right-click) to toggle the flag state of a cell.
      * This delegates to Board.toggleFlag, which contains the game logic and scoring.
      */
+    /* Used by the UI (right-click) to toggle the flag state of a cell.
+            * This delegates to Board.toggleFlag, which contains the game logic and scoring.
+ * 🔥 SIMPLIFIED: No turn control logic - BoardPanel handles that.
+ */
     public void toggleFlagUI(int boardNumber, int row, int col) {
         if (currentGame == null || !isGameRunning()) return;
 
@@ -181,10 +214,9 @@ public class GameController {
             return;
         }
 
-        // Call the Model's logic method to toggle the flag, update score, etc.
+        // Simply perform the toggle - Board handles scoring
         board.toggleFlag(row, col);
     }
-
 
     /**
      * Returns display data for a single cell.
@@ -247,60 +279,9 @@ public class GameController {
             this.text = text;
         }
     }
-
-    // ======================================================
-    //  ORIGINAL REVEAL LOGIC (כמו שהיה אצלך) – לא נוגעת בו
-    // ======================================================
-
-    /**
-     * Reveals a cell on the specified board.
-     * For question and surprise cells, this method:
-     * - Checks if the cell was already used
-     * - If already used, skips the special effect and does nothing
-     * - If not used, marks it as used and triggers the special effect
-     *
-     * NOTE: This method נשאר כמו שהוא, כדי לא לשנות לוגיקה קיימת.
-     * כרגע ה-View משתמש ב-revealCellUI, אבל אפשר להשתמש גם בזה אם תצטרכי.
-     *
-     * @param boardNumber 1 for board1, 2 for board2
-     * @param row the row index of the cell
-     * @param col the column index of the cell
-     * @return true if the cell was successfully revealed/activated, false otherwise
-     */
-    public boolean revealCell(int boardNumber, int row, int col) {
-        if (currentGame == null) {
-            return false;
-        }
-
-        Board board = (boardNumber == 1) ? currentGame.getBoard1() : currentGame.getBoard2();
-        if (board == null || row < 0 || row >= board.getRows() || col < 0 || col >= board.getCols()) {
-            return false;
-        }
-
-        Cell cell = board.getCell(row, col);
-        if (cell == null || cell.getState() == Cell.CellState.REVEALED) {
-            return false;
-        }
-
-        // Handle question and surprise cells
-        if (cell.getContent() == Cell.CellContent.QUESTION ||
-                cell.getContent() == Cell.CellContent.SURPRISE) {
-
-            // Check if cell is already used
-            if (cell.isUsed()) {
-                // Cell was already used, skip the special effect
-                // Just reveal it (change state to REVEALED) without triggering effect
-                cell.setState(Cell.CellState.REVEALED);
-                return true;
-            }
-
-            // Cell is not used yet - activate it for the first time
-            cell.setUsed(true);
-            cell.setState(Cell.CellState.REVEALED);
-
-            // Trigger the special effect via Game class
-            currentGame.activateSpecialCell(cell.getContent(), cell.getQuestionId());
-        }
-
-    return false;
-}}
+    // Inside Controller/GameController.java (ADD this helper method)
+    public boolean isCellFlagged(int boardNumber, int row, int col) {
+        Board board = getBoard(boardNumber);
+        return board != null && board.isFlagged(row, col);
+    }
+}
