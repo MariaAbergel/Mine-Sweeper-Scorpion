@@ -18,6 +18,9 @@ public class Game {
     private QuestionManager questionManager;
     private QuestionPresenter questionPresenter;
 
+    // 🔥 NEW ADDITION 1: Field to store the message for the View
+    private String lastActionMessage;
+
     /**
      * Question difficulty levels used for scoring and life rewards/penalties.
      */
@@ -38,6 +41,7 @@ public class Game {
         this.sharedScore = 0;
         this.gameState = GameState.RUNNING;
         this.currentPlayerTurn = 1;
+        this.lastActionMessage = null; // Initialize the message field
 
         this.board1 = new Board(difficulty, this);
         this.board2 = new Board(difficulty, this);
@@ -61,14 +65,14 @@ public class Game {
 
         // 1. Loss Condition Check (Lives <= 0)
         if (sharedLives <= 0) {
-            this.sharedLives = 0; // Ensure display doesn't show negative lives
+            this.sharedLives = 0;
             gameState = GameState.LOST;
             endGameProcessing();
             return;
         }
 
-        // 2. Win Condition Check (All safe cells cleared)
-        if (board1.getSafeCellsRemaining() == 0 && board2.getSafeCellsRemaining() == 0) {
+        // 2. Win Condition Check (All mines found on EITHER board)
+        if (board1.areAllMinesFound() || board2.areAllMinesFound()) {
             gameState = GameState.WON;
             endGameProcessing();
         }
@@ -122,18 +126,14 @@ public class Game {
      * Extra lives above the cap are converted to score.
      */
     public void setSharedLives(int newLives) {
-        // 1. Apply Life Cap and Score Conversion
         if (newLives > MAX_LIVES) {
             int excess = newLives - MAX_LIVES;
             this.sharedLives = MAX_LIVES;
-            // Convert excess lives to score using the activation cost as a multiplier
             this.sharedScore += excess * difficulty.getActivationCost();
             System.out.println("Life cap reached! Converted " + excess + " excess lives to " + (excess * difficulty.getActivationCost()) + " points.");
         } else {
             this.sharedLives = newLives;
         }
-
-        // 2. Check Game Status (for Loss or Win)
         checkGameStatus();
     }
 
@@ -146,9 +146,7 @@ public class Game {
     public void addLife(int pointsValue) {
         if (sharedLives < MAX_LIVES) {
             sharedLives++;
-            // Note: score for the action (e.g. correct answer) must be added separately.
         } else {
-            // Convert surplus life to the value associated with the action
             sharedScore += pointsValue;
             System.out.println("Life cap reached! Converted life gain to " + pointsValue + " points.");
         }
@@ -167,6 +165,7 @@ public class Game {
 
     public void setSharedScore(int sharedScore) {
         this.sharedScore = sharedScore;
+        checkGameStatus();
     }
 
     public void setGameState(GameState gameState) {
@@ -185,16 +184,13 @@ public class Game {
 
         int cost = difficulty.getActivationCost();
 
-        // 1. Check Cost
         if (sharedScore < cost) {
-            System.out.println("Not enough points to activate special cell! (Cost: " + cost + ")");
+            this.lastActionMessage = "You need at least " + cost + " points to activate this " + cellContent.name().toLowerCase() + " cell.";
             return;
         }
 
-        // Deduct cost
         sharedScore -= cost;
 
-        // 2. Route Logic
         if (cellContent == Cell.CellContent.SURPRISE) {
             handleSurprise();
         } else if (cellContent == Cell.CellContent.QUESTION) {
@@ -210,16 +206,16 @@ public class Game {
         boolean isGoodSurprise = rand.nextBoolean();
         int pointsValue = difficulty.getSurpriseValue();
 
+        String intro = "You've activated a Surprise cell! There's a 50/50 chance of a reward or a penalty. Let's see what you got...\n\n";
+
         if (isGoodSurprise) {
-            // Good Surprise: Gained points AND attempted 1 life.
             sharedScore += pointsValue;
-            addLife(pointsValue); // Add 1 life (handles cap using pointsValue for conversion)
-            System.out.println("Surprise! Gained " + pointsValue + " points and attempted 1 Life.");
+            addLife(pointsValue);
+            this.lastActionMessage = intro + "A stroke of luck! You've been awarded " + pointsValue + " points and an extra life!";
         } else {
-            // Bad Surprise: Lost points AND lost 1 life.
             sharedScore -= pointsValue;
-            deductLife(1); // Lost 1 life (triggers loss check)
-            System.out.println("Surprise! Lost " + pointsValue + " points and 1 Life.");
+            deductLife(1);
+            this.lastActionMessage = intro + "An unfortunate turn of events! You've lost " + pointsValue + " points and a life.";
         }
     }
     /**
@@ -231,7 +227,6 @@ public class Game {
 
         Random rand = new Random();
 
-        // --- EASY GAME DIFFICULTY ---
         if (difficulty == Difficulty.EASY) {
             if (isCorrect) {
                 switch (qLevel) {
@@ -248,10 +243,7 @@ public class Game {
                     case EXPERT: applyPenalties(15, 1); break;
                 }
             }
-        }
-
-        // --- MEDIUM GAME DIFFICULTY ---
-        else if (difficulty == Difficulty.MEDIUM) {
+        } else if (difficulty == Difficulty.MEDIUM) {
             if (isCorrect) {
                 switch (qLevel) {
                     case EASY:   addRewards(8, 1); break;
@@ -270,10 +262,7 @@ public class Game {
                         break;
                 }
             }
-        }
-
-        // --- HARD GAME DIFFICULTY ---
-        else if (difficulty == Difficulty.HARD) {
+        } else if (difficulty == Difficulty.HARD) {
             if (isCorrect) {
                 switch (qLevel) {
                     case EASY:   addRewards(10, 1); break;
@@ -293,8 +282,6 @@ public class Game {
                 }
             }
         }
-
-        // Final check just in case, though it's run by life changes.
         checkGameStatus();
     }
 
@@ -322,7 +309,6 @@ public class Game {
      */
     private void addRewards(int points, int lives) {
         this.sharedScore += points;
-        // Use the dedicated life management method, passing the point reward value for cap conversion
         for (int i = 0; i < lives; i++) {
             addLife(points);
         }
@@ -333,7 +319,6 @@ public class Game {
      */
     private void applyPenalties(int points, int lives) {
         this.sharedScore -= points;
-        // Use the dedicated life deduction method (triggers loss check)
         deductLife(lives);
         System.out.println("Incorrect! -" + points + " pts, -" + lives + " lives.");
     }
@@ -353,6 +338,12 @@ public class Game {
         currentPlayerTurn = (currentPlayerTurn == 1) ? 2 : 1;
     }
 
+    public String getAndClearLastActionMessage() {
+        String message = this.lastActionMessage;
+        this.lastActionMessage = null;
+        return message;
+    }
+
     // --- Getters ---
 
     public GameState getGameState() { return gameState; }
@@ -361,57 +352,5 @@ public class Game {
     public Difficulty getDifficulty() { return difficulty; }
     public int getSharedLives() { return sharedLives; }
     public int getSharedScore() { return sharedScore; }
-
-    // --- Special cell activation entry point ---
-    public void activateSpecialCell(Cell.CellContent cellContent, Integer questionId) {
-        if (cellContent != Cell.CellContent.QUESTION && cellContent != Cell.CellContent.SURPRISE) {
-            return;
-        }
-
-        int cost = difficulty.getActivationCost();
-
-        // 1. Check Cost
-        if (sharedScore < cost) {
-            System.out.println("Not enough points to activate special cell! (Cost: " + cost + ")");
-            return;
-        }
-
-        // Deduct cost
-        sharedScore -= cost;
-
-        // 2. Route Logic
-        if (cellContent == Cell.CellContent.SURPRISE) {
-            handleSurprise();
-        } else if (cellContent == Cell.CellContent.QUESTION) {
-            // Fetch a random question for this difficulty
-            Question q = (questionManager != null)
-                    ? questionManager.getRandomQuestionForDifficulty(difficulty)
-                    : null;
-
-            if (q == null) {
-                System.out.println("No questions available to present.");
-                return;
-            }
-
-            if (questionPresenter == null) {
-                System.out.println("Question presenter not set. Cannot show question popup.");
-                return;
-            }
-
-            boolean isCorrect = questionPresenter.presentQuestion(q);
-
-            // Map question difficulty to QuestionLevel; default EASY
-            QuestionLevel qLevel = QuestionLevel.EASY;
-            if (q.getDifficultyLevel() != null) {
-                String lvl = q.getDifficultyLevel().toUpperCase();
-                try {
-                    qLevel = QuestionLevel.valueOf(lvl);
-                } catch (IllegalArgumentException ignored) {
-                    // fallback EASY
-                }
-            }
-
-            processQuestionAnswer(qLevel, isCorrect);
-        }
-    }
+    public int getMaxLives() { return MAX_LIVES; }
 }

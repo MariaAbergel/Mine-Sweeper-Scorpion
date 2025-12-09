@@ -197,23 +197,38 @@ public class Board {
     }
 
     /**
-     * Toggles flag state on a cell and applies score changes according to difficulty rules.
-     * Mine: reward; Non-mine: penalty.
+     * Toggles flag state and applies points based on rule.
+     * SRS 3.1.1: Mine +1pt, Non-Mine -3pts.
+     * This method must be VOID or return only if the action was successful for the Controller's logic to work.
      */
-    public void toggleFlag(int r, int c) {
-        if (!isValid(r, c) || game.getGameState() != GameState.RUNNING) return;
+    public void toggleFlag(int r, int c) { // 🔥 Changed to VOID
+        if (!isValid(r, c) || cells[r][c].isRevealed() || game.getGameState() != GameState.RUNNING) return;
 
         Cell cell = cells[r][c];
-        cell.toggleFlag();
 
-        // Apply score only when the cell becomes FLAGGED
-        if (cell.getState() == Cell.CellState.FLAGGED) {
-            if (cell.isMine()) {
-                game.setSharedScore(game.getSharedScore() + game.getDifficulty().getMineFlagReward());
+        // Determine the state *before* toggling
+        boolean wasFlagged = cell.isFlagged();
+
+        // Toggle the flag (returns true if the state changed successfully)
+        boolean stateChanged = cell.toggleFlag();
+
+        if (stateChanged) {
+            if (!wasFlagged) {
+                // Case 1: Flag was SET (HIDDEN -> FLAGGED) - This ends the turn.
+                if (cell.isMine()) {
+                    game.setSharedScore(game.getSharedScore() + game.getDifficulty().getMineFlagReward());
+                } else {
+                    game.setSharedScore(game.getSharedScore() + game.getDifficulty().getNonMineFlagPenalty());
+                }
+                // No return true/false here, as the Controller handles the turn switch logic using isFlagged() checks.
+
             } else {
-                game.setSharedScore(game.getSharedScore() + game.getDifficulty().getNonMineFlagPenalty());
+                // Case 2: Flag was UNSET (FLAGGED -> HIDDEN) - Correction move.
+                // No score reversal is implemented here, just the state change.
             }
         }
+        // After every move, check if we Won or Lost
+        game.checkGameStatus();
     }
 
 
@@ -288,6 +303,33 @@ public class Board {
             }
         }
     }
+
+    /**
+     * 🔥 NEW: Helper method for the Controller to check flag status (Fixes error #2 in Controller).
+     */
+    public boolean isFlagged(int r, int c) {
+        if (r < 0 || r >= rows || c < 0 || c >= cols) return false;
+        // Assuming 'cells' is the array of Cell objects
+        return cells[r][c].isFlagged();
+    }
+
+    /**
+     * Checks if all mines on the board have been found (revealed or flagged).
+     * @return true if all mines are found, false otherwise.
+     */
+    public boolean areAllMinesFound() {
+        int foundMines = 0;
+        for (int r = 0; r < rows; r++) {
+            for (int c = 0; c < cols; c++) {
+                Cell cell = cells[r][c];
+                if (cell.isMine() && (cell.isRevealed() || cell.isFlagged())) {
+                    foundMines++;
+                }
+            }
+        }
+        return foundMines == totalMines;
+    }
+
     // --- Getters ---
 
     public int getSafeCellsRemaining () {

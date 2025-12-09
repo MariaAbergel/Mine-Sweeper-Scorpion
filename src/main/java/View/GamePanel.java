@@ -36,9 +36,13 @@ public class GamePanel extends JPanel {
     private JLabel lblLives;
     private JPanel heartsPanel;
     private List<JLabel> heartLabels;
-    /**
-     * Creates the main game panel for two players using the shared GameController.
-     */
+
+    // Control Buttons
+    private JButton btnPause;
+    private JButton btnRestart;
+    private JButton btnExit;
+
+
     public GamePanel(GameController controller,
                      String player1Name, String player2Name) {
         this.controller = controller;
@@ -155,7 +159,7 @@ public class GamePanel extends JPanel {
         lblScore.setFont(new Font("Arial", Font.BOLD, 18));
 
         lblLives = new JLabel("LIVES: " + controller.getSharedLives() + "/" +
-                controller.getStartingLives());
+                controller.getMaxLives());
         lblLives.setForeground(Color.WHITE);
         lblLives.setFont(new Font("Arial", Font.BOLD, 18));
 
@@ -175,9 +179,9 @@ public class GamePanel extends JPanel {
         JPanel controlsPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 25, 5));
         controlsPanel.setBackground(Color.BLACK);
 
-        JButton btnPause = new JButton("Pause");
-        JButton btnRestart = new JButton("Restart");
-        JButton btnExit = new JButton("Exit");
+        btnPause = new JButton("Pause");
+        btnRestart = new JButton("Restart");
+        btnExit = new JButton("Exit");
 
         styleControlButton(btnPause);
         styleControlButton(btnRestart);
@@ -186,12 +190,12 @@ public class GamePanel extends JPanel {
         btnExit.addActionListener(e -> SwingUtilities.getWindowAncestor(this).dispose());
         btnRestart.addActionListener(e -> {
             controller.restartGame();
-            // Rebuild hearts and status after restart
             buildHearts();
             updateStatus();
             updateTurnUI();
             boardPanel1.refresh();
             boardPanel2.refresh();
+            btnPause.setEnabled(true); // Re-enable pause on restart
         });
 
         controlsPanel.add(btnPause);
@@ -230,7 +234,7 @@ public class GamePanel extends JPanel {
      */
     private void buildHearts() {
         heartLabels = new ArrayList<>();
-        int maxLives = controller.getStartingLives();
+        int maxLives = controller.getMaxLives();
 
         heartsPanel.removeAll();
         for (int i = 0; i < maxLives; i++) {
@@ -249,28 +253,21 @@ public class GamePanel extends JPanel {
      * Updates status, handles game over, and switches turns when appropriate.
      */
     private void handleMoveMade() {
-        // First update score / lives / mines counters
         updateStatus();
-
-        // If the game has ended (win or loss) after this move:
-        if (controller.isGameOver()) {
-            // Boards are already revealed in the Model → just refresh the UI
-            boardPanel1.refresh();
-            boardPanel2.refresh();
-
-            // Stop showing an active turn for any player
-            updateTurnUI();
-
-            // Show final dialog to players
-            showGameOverDialog();
-            return;  // Do not switch turn after the game ended
+        String outcomeMessage = controller.getAndClearLastActionMessage();
+        if (outcomeMessage != null) {
+            displayOutcomePopup(outcomeMessage);
         }
-
-        // If the game is still running – switch turn to the other player
+        if (controller.isGameOver()) {
+            handleGameOverUI();
+            return;
+        }
         if (controller.isGameRunning()) {
-            controller.switchTurn();
+            controller.processTurnEnd();
         }
         updateTurnUI();
+        boardPanel1.refresh();
+        boardPanel2.refresh();
     }
 
 
@@ -306,30 +303,45 @@ public class GamePanel extends JPanel {
     public void updateStatus() {
         lblMinesLeft1.setText("MINES LEFT: " + controller.getMinesLeft(1));
         lblMinesLeft2.setText("MINES LEFT: " + controller.getMinesLeft(2));
-
         lblScore.setText("SCORE: " + controller.getSharedScore());
         lblLives.setText("LIVES: " + controller.getSharedLives() + "/" +
-                controller.getStartingLives());
-
+                controller.getMaxLives());
         updateHearts();
         revalidate();
         repaint();
     }
 
-    /**
-     * Updates which board shows “WAIT FOR YOUR TURN” overlay based on current player.
-     */
+    /** Displays the result of the Surprise tile. */
+    private void displayOutcomePopup(String message) {
+        JOptionPane.showMessageDialog(this,
+                message,
+                "SURPRISE TILE ACTIVATED!",
+                JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    /** Show "WAIT FOR YOUR TURN" on the board that is not active. */
     private void updateTurnUI() {
-        int current = controller.getCurrentPlayerTurn();  // 1 or 2
+        int current = controller.getCurrentPlayerTurn();
         boardPanel1.setWaiting(current != 1);
         boardPanel2.setWaiting(current != 2);
+
+        if (current == 1) {
+            lblPlayer1Box.setBackground(new Color(90, 90, 110));
+            lblPlayer2Box.setBackground(new Color(60, 60, 80));
+        } else if (current == 2) {
+            lblPlayer1Box.setBackground(new Color(60, 60, 80));
+            lblPlayer2Box.setBackground(new Color(90, 90, 110));
+        } else {
+            lblPlayer1Box.setBackground(new Color(60, 60, 80));
+            lblPlayer2Box.setBackground(new Color(60, 60, 80));
+        }
     }
     /**
      * Colors heart icons according to current lives.
      */
     private void updateHearts() {
         int lives = controller.getSharedLives();
-        int max = controller.getStartingLives();
+        int max = controller.getMaxLives();
 
         for (int i = 0; i < max && i < heartLabels.size(); i++) {
             JLabel heart = heartLabels.get(i);
@@ -339,5 +351,37 @@ public class GamePanel extends JPanel {
                 heart.setForeground(Color.DARK_GRAY);
             }
         }
+    }
+
+    /** Handles the visual changes and dialog when the game ends. */
+    private void handleGameOverUI() {
+        boardPanel1.setWaiting(true);
+        boardPanel2.setWaiting(true);
+        boardPanel1.refresh();
+        boardPanel2.refresh();
+        btnPause.setEnabled(false);
+
+        boolean isWin = controller.getCurrentGame().getGameState() == Model.GameState.WON;
+        String title = isWin ? "Congratulations, You Won!" : "Game Over";
+        String message;
+
+        if (isWin) {
+            message = String.format(
+                "VICTORY!\n\nFinal Score: %d\n\nPlease use the buttons below to Restart or Exit.",
+                controller.getSharedScore()
+            );
+        } else {
+            message = String.format(
+                "GAME OVER!\n\nFinal Score: %d\n\nPlease use the buttons below to Restart or Exit.",
+                controller.getSharedScore()
+            );
+        }
+
+        JOptionPane.showMessageDialog(
+            this,
+            message,
+            title,
+            isWin ? JOptionPane.INFORMATION_MESSAGE : JOptionPane.WARNING_MESSAGE
+        );
     }
 }

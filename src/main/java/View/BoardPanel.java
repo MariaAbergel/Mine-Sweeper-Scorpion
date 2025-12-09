@@ -4,8 +4,8 @@ import Controller.GameController;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.MouseAdapter; // NEW
-import java.awt.event.MouseEvent;   // NEW
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 
 /**
  * View component for a single player's board.
@@ -58,15 +58,14 @@ public class BoardPanel extends JPanel {
                 btn.setPreferredSize(new Dimension(25, 25));
 
                 // 1. ActionListener for standard LEFT-CLICK (Reveal)
-                btn.addActionListener(e -> handleClick(rr, cc, false)); // false = isFlagging
+                btn.addActionListener(e -> handleClick(rr, cc, false));
 
                 // 2. MouseListener for RIGHT-CLICK (Flagging)
                 btn.addMouseListener(new MouseAdapter() {
                     @Override
                     public void mouseClicked(MouseEvent e) {
-                        // Check for right-click (usually BUTTON3)
                         if (SwingUtilities.isRightMouseButton(e)) {
-                            handleClick(rr, cc, true); // true = isFlagging
+                            handleClick(rr, cc, true);
                         }
                     }
                 });
@@ -94,7 +93,7 @@ public class BoardPanel extends JPanel {
     }
 
     /**
-     * Handles both revealing (isFlagging=false) and flagging (isFlagging=true).
+     * Main click handler. Routes to the correct logic based on click type.
      */
     private void handleClick(int r, int c, boolean isFlagging) {
         if (!controller.isGameRunning()) return;
@@ -139,6 +138,8 @@ public class BoardPanel extends JPanel {
         if (moveCallback != null) {
             moveCallback.run();
         }
+
+        refresh();
     }
 
 
@@ -159,15 +160,24 @@ public class BoardPanel extends JPanel {
         int rows = controller.getBoardRows(boardNumber);
         int cols = controller.getBoardCols(boardNumber);
 
+        boolean gameIsRunning = controller.isGameRunning();
+
         for (int r = 0; r < rows; r++) {
             for (int c = 0; c < cols; c++) {
                 JButton btn = buttons[r][c];
                 GameController.CellViewData data =
                         controller.getCellViewData(boardNumber, r, c);
 
-                btn.setEnabled(data.enabled);
+                if (!gameIsRunning) {
+                    btn.setEnabled(false);
+                } else {
+                    btn.setEnabled(data.enabled);
+                }
+
                 btn.setText(data.text);
             }
         }
+        revalidate();
+        repaint();
     }
 }

@@ -107,8 +107,7 @@ public class GameController {
     // Returns true if the game has ended with WIN or LOSS.
     public boolean isGameOver() {
         if (currentGame == null) return false;
-        GameState state = currentGame.getGameState();
-        return state == GameState.WON || state == GameState.LOST;
+        return currentGame.getGameState() != GameState.RUNNING;
     }
     // Returns the current player's turn
     public int getCurrentPlayerTurn() {
@@ -139,6 +138,25 @@ public class GameController {
         return currentGame.getDifficulty().getStartingLives();
     }
 
+    public int getMaxLives() {
+        return (currentGame != null) ? currentGame.getMaxLives() : 0;
+    }
+
+    public String getAndClearLastActionMessage() {
+        if (currentGame != null) {
+            return currentGame.getAndClearLastActionMessage();
+        }
+        return null;
+    }
+    
+    public void processTurnEnd() {
+        if (currentGame == null || currentGame.getGameState() != GameState.RUNNING) return;
+        currentGame.switchTurn();
+    }
+
+    // ======================================================
+    //  BOARD-LEVEL INFO FOR THE VIEW
+    // ======================================================
 
     // Returns board instance based on board number
     private Board getBoard(int boardNumber) {
@@ -161,9 +179,6 @@ public class GameController {
         return (b != null) ? b.getTotalMines() : 0;
     }
 
-    /**
-     * Computes remaining mines on a board, based on revealed/flagged correct mines.
-     */
     public int getMinesLeft(int boardNumber) {
         Board b = getBoard(boardNumber);
         if (b == null) return 0;
@@ -194,14 +209,9 @@ public class GameController {
         if (currentGame == null || !isGameRunning()) return false;
 
         Board board = getBoard(boardNumber);
-        if (board == null) return false;
-
-        if (row < 0 || row >= board.getRows() || col < 0 || col >= board.getCols()) {
-            return false;
-        }
-
+        if (board == null) return;
+        if (row < 0 || row >= board.getRows() || col < 0 || col >= board.getCols()) return;
         board.revealCell(row, col);
-        return true;
     }
 
     /**
@@ -210,15 +220,9 @@ public class GameController {
      */
     public void toggleFlagUI(int boardNumber, int row, int col) {
         if (currentGame == null || !isGameRunning()) return;
-
         Board board = getBoard(boardNumber);
         if (board == null) return;
-
-        if (row < 0 || row >= board.getRows() || col < 0 || col >= board.getCols()) {
-            return;
-        }
-
-        // Call the Model's logic method to toggle the flag, update score, etc.
+        if (row < 0 || row >= board.getRows() || col < 0 || col >= board.getCols()) return;
         board.toggleFlag(row, col);
     }
 
@@ -228,23 +232,14 @@ public class GameController {
      */
     public CellViewData getCellViewData(int boardNumber, int row, int col) {
         Board board = getBoard(boardNumber);
-        if (board == null) {
-            return new CellViewData(true, "");
-        }
-
-        if (row < 0 || row >= board.getRows() || col < 0 || col >= board.getCols()) {
-            return new CellViewData(true, "");
-        }
-
+        if (board == null) return new CellViewData(true, "");
+        if (row < 0 || row >= board.getRows() || col < 0 || col >= board.getCols()) return new CellViewData(true, "");
         Cell cell = board.getCell(row, col);
-        if (cell == null) {
-            return new CellViewData(true, "");
-        }
+        if (cell == null) return new CellViewData(true, "");
 
         switch (cell.getState()) {
             case HIDDEN:
                 return new CellViewData(true, "");
-
             case FLAGGED:
                 return new CellViewData(true, "F");
 
