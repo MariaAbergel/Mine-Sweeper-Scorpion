@@ -15,6 +15,9 @@ public class Game {
     private int sharedScore;
     private GameState gameState;
     private int currentPlayerTurn;
+    private QuestionManager questionManager;
+    private QuestionPresenter questionPresenter;
+
     /**
      * Question difficulty levels used for scoring and life rewards/penalties.
      */
@@ -294,6 +297,26 @@ public class Game {
         // Final check just in case, though it's run by life changes.
         checkGameStatus();
     }
+
+    /**
+     * Hook for UI to present a question and return true/false for correctness.
+     */
+    public interface QuestionPresenter {
+        boolean presentQuestion(Question question);
+    }
+
+    public void setQuestionPresenter(QuestionPresenter presenter) {
+        this.questionPresenter = presenter;
+    }
+
+    public void setQuestionManager(QuestionManager manager) {
+        this.questionManager = manager;
+    }
+
+    public QuestionManager getQuestionManager() {
+        return questionManager;
+    }
+
     /**
      * Applies positive rewards after a correct answer: adds points and lives.
      */
@@ -338,4 +361,57 @@ public class Game {
     public Difficulty getDifficulty() { return difficulty; }
     public int getSharedLives() { return sharedLives; }
     public int getSharedScore() { return sharedScore; }
+
+    // --- Special cell activation entry point ---
+    public void activateSpecialCell(Cell.CellContent cellContent, Integer questionId) {
+        if (cellContent != Cell.CellContent.QUESTION && cellContent != Cell.CellContent.SURPRISE) {
+            return;
+        }
+
+        int cost = difficulty.getActivationCost();
+
+        // 1. Check Cost
+        if (sharedScore < cost) {
+            System.out.println("Not enough points to activate special cell! (Cost: " + cost + ")");
+            return;
+        }
+
+        // Deduct cost
+        sharedScore -= cost;
+
+        // 2. Route Logic
+        if (cellContent == Cell.CellContent.SURPRISE) {
+            handleSurprise();
+        } else if (cellContent == Cell.CellContent.QUESTION) {
+            // Fetch a random question for this difficulty
+            Question q = (questionManager != null)
+                    ? questionManager.getRandomQuestionForDifficulty(difficulty)
+                    : null;
+
+            if (q == null) {
+                System.out.println("No questions available to present.");
+                return;
+            }
+
+            if (questionPresenter == null) {
+                System.out.println("Question presenter not set. Cannot show question popup.");
+                return;
+            }
+
+            boolean isCorrect = questionPresenter.presentQuestion(q);
+
+            // Map question difficulty to QuestionLevel; default EASY
+            QuestionLevel qLevel = QuestionLevel.EASY;
+            if (q.getDifficultyLevel() != null) {
+                String lvl = q.getDifficultyLevel().toUpperCase();
+                try {
+                    qLevel = QuestionLevel.valueOf(lvl);
+                } catch (IllegalArgumentException ignored) {
+                    // fallback EASY
+                }
+            }
+
+            processQuestionAnswer(qLevel, isCorrect);
+        }
+    }
 }
