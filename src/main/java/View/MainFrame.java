@@ -6,8 +6,9 @@ import javax.swing.*;
 import java.awt.*;
 
 /**
- * Main application frame – switches between StartPanel and GamePanel.
- * מדברת עם המודל רק דרך GameController.
+ * Main application frame.
+ * Manages screen navigation between StartPanel and GamePanel using CardLayout.
+ * Communicates with the Model layer only through GameController.
  */
 public class MainFrame extends JFrame implements StartPanel.StartGameListener {
 
@@ -17,11 +18,13 @@ public class MainFrame extends JFrame implements StartPanel.StartGameListener {
 
     private StartPanel startPanel;
     private GamePanel gamePanel;
-
+    /**
+     * Initializes the main window and loads the initial start screen.
+     */
     public MainFrame() {
         super("Scorpion Minesweeper");
 
-        this.controller = new GameController();
+        this.controller = GameController.getInstance();
         this.cardLayout = new CardLayout();
         this.cardPanel = new JPanel(cardLayout);
 
@@ -41,7 +44,8 @@ public class MainFrame extends JFrame implements StartPanel.StartGameListener {
     }
 
     /**
-     * Called by StartPanel when the user clicks "Start Game".
+     * Callback from StartPanel when the user starts a new game.
+     * Initializes the game in the controller and switches to the GamePanel.
      */
     @Override
     public void onStartGame(String player1Name, String player2Name, String difficultyKey) {
@@ -65,6 +69,9 @@ public class MainFrame extends JFrame implements StartPanel.StartGameListener {
         return bar;
     }
 
+    /**
+     * Application entry point. Launches the main frame on the EDT.
+     */
     public static void main(String[] args) {
         SwingUtilities.invokeLater(MainFrame::new);
     }

@@ -8,8 +8,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Main in-game panel: shows two boards, players, score, lives, controls.
- * מדבר רק עם GameController – בלי Model ישיר.
+ * Main in-game panel: displays two boards, player info, score, lives and controls.
+ * Communicates only with GameController (no direct access to the Model layer).
  */
 public class GamePanel extends JPanel {
 
@@ -36,7 +36,9 @@ public class GamePanel extends JPanel {
     private JLabel lblLives;
     private JPanel heartsPanel;
     private List<JLabel> heartLabels;
-
+    /**
+     * Creates the main game panel for two players using the shared GameController.
+     */
     public GamePanel(GameController controller,
                      String player1Name, String player2Name) {
         this.controller = controller;
@@ -51,7 +53,9 @@ public class GamePanel extends JPanel {
         updateStatus();
         updateTurnUI();
     }
-
+    /**
+     * Builds the UI layout: title, two player areas, and bottom status/control area.
+     */
     private void initComponents() {
         setLayout(new BorderLayout());
         setBackground(Color.BLACK);
@@ -200,7 +204,9 @@ public class GamePanel extends JPanel {
 
         add(bottomOuter, BorderLayout.SOUTH);
     }
-
+    /**
+     * Creates a styled label for a player's name header box.
+     */
     private JLabel createPlayerBoxLabel(String text) {
         JLabel lbl = new JLabel(text, SwingConstants.CENTER);
         lbl.setForeground(Color.WHITE);
@@ -211,13 +217,17 @@ public class GamePanel extends JPanel {
         lbl.setBorder(BorderFactory.createEmptyBorder(10, 30, 10, 30));
         return lbl;
     }
-
+    /**
+     * Applies consistent styling to control buttons.
+     */
     private void styleControlButton(JButton btn) {
         btn.setFont(new Font("Arial", Font.BOLD, 18));
         btn.setFocusPainted(false);
         btn.setMargin(new Insets(3, 12, 3, 12));
     }
-
+    /**
+     * Builds the row of heart icons according to the starting number of lives.
+     */
     private void buildHearts() {
         heartLabels = new ArrayList<>();
         int maxLives = controller.getStartingLives();
@@ -234,16 +244,65 @@ public class GamePanel extends JPanel {
         heartsPanel.repaint();
     }
 
-    /** Called after each move from a BoardPanel. */
+    /**
+     * Called after each move from a BoardPanel.
+     * Updates status, handles game over, and switches turns when appropriate.
+     */
     private void handleMoveMade() {
+        // First update score / lives / mines counters
+        updateStatus();
+
+        // If the game has ended (win or loss) after this move:
+        if (controller.isGameOver()) {
+            // Boards are already revealed in the Model → just refresh the UI
+            boardPanel1.refresh();
+            boardPanel2.refresh();
+
+            // Stop showing an active turn for any player
+            updateTurnUI();
+
+            // Show final dialog to players
+            showGameOverDialog();
+            return;  // Do not switch turn after the game ended
+        }
+
+        // If the game is still running – switch turn to the other player
         if (controller.isGameRunning()) {
             controller.switchTurn();
         }
-        updateStatus();
         updateTurnUI();
     }
 
-    /** Refresh SCORE, LIVES, MINES LEFT, HEARTS. */
+
+    /**
+     * Displays a dialog at the end of the game (victory or game over) with final score.
+     */
+    private void showGameOverDialog() {
+        String title;
+        String message;
+
+        // אם אין יותר לבבות – הפסד
+        if (controller.getSharedLives() <= 0) {
+            title = "Game Over";
+            message = "All lives are gone.\nFinal score: " + controller.getSharedScore();
+        } else {
+            // אחרת – הנחנו שכל הלוחות נפתרו -> ניצחון
+            title = "Victory!";
+            message = "All safe cells are revealed!\nFinal score: " + controller.getSharedScore();
+        }
+
+        JOptionPane.showMessageDialog(
+                this,
+                message,
+                title,
+                JOptionPane.INFORMATION_MESSAGE
+        );
+    }
+
+
+    /**
+     * Updates score, lives, mines-left labels and heart colors.
+     */
     public void updateStatus() {
         lblMinesLeft1.setText("MINES LEFT: " + controller.getMinesLeft(1));
         lblMinesLeft2.setText("MINES LEFT: " + controller.getMinesLeft(2));
@@ -257,13 +316,17 @@ public class GamePanel extends JPanel {
         repaint();
     }
 
-    /** Show “WAIT FOR YOUR TURN” on the board that is not active. */
+    /**
+     * Updates which board shows “WAIT FOR YOUR TURN” overlay based on current player.
+     */
     private void updateTurnUI() {
         int current = controller.getCurrentPlayerTurn();  // 1 or 2
         boardPanel1.setWaiting(current != 1);
         boardPanel2.setWaiting(current != 2);
     }
-
+    /**
+     * Colors heart icons according to current lives.
+     */
     private void updateHearts() {
         int lives = controller.getSharedLives();
         int max = controller.getStartingLives();

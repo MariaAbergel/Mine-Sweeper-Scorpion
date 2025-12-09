@@ -8,8 +8,8 @@ import java.awt.event.MouseAdapter; // NEW
 import java.awt.event.MouseEvent;   // NEW
 
 /**
- * Shows a single board (for one player).
- * לא מכיר בכלל את Board / Cell / Game – רק GameController.
+ * View component for a single player's board.
+ * Displays a grid of buttons and interacts only with GameController (not with the Model directly).
  */
 public class BoardPanel extends JPanel {
 
@@ -19,7 +19,7 @@ public class BoardPanel extends JPanel {
 
     private JButton[][] buttons;
     private JLabel waitLabel;
-    private boolean waiting;         // true = "WAIT FOR YOUR TURN"
+    private boolean waiting;         // true = this player is currently not allowed to play
 
     public BoardPanel(GameController controller,
                       int boardNumber,
@@ -32,7 +32,9 @@ public class BoardPanel extends JPanel {
 
         initComponents();
     }
-
+    /**
+     * Builds the board UI: grid of buttons + overlay label for "WAIT FOR YOUR TURN".
+     */
     private void initComponents() {
         int rows = controller.getBoardRows(boardNumber);
         int cols = controller.getBoardCols(boardNumber);
@@ -96,31 +98,53 @@ public class BoardPanel extends JPanel {
      */
     private void handleClick(int r, int c, boolean isFlagging) {
         if (!controller.isGameRunning()) return;
-
-        // Not this board's turn?
         if (controller.getCurrentPlayerTurn() != boardNumber) return;
-
-        // Also ignore if this panel is marked as waiting
         if (waiting) return;
 
         if (isFlagging) {
-            // Right-click: Toggle flag state (Model/Controller action)
-            controller.toggleFlagUI(boardNumber, r, c);
+            // Right-click: only flag non-revealed cells
+            if (!controller.isCellRevealed(boardNumber, r, c)) {
+                controller.toggleFlagUI(boardNumber, r, c);
+            }
         } else {
-            // Left-click: Reveal cell (Model/Controller action)
-            controller.revealCellUI(boardNumber, r, c);
+            // Left-click: reveal cell
+
+            boolean wasRevealed = controller.isCellRevealed(boardNumber, r, c);
+
+            // 1) If the cell was hidden, reveal it (including cascade if needed)
+            if (!wasRevealed) {
+                controller.revealCellUI(boardNumber, r, c);
+                // Refresh to show QUESTION/SURPRISE before asking activation
+                refresh();
+            }
+
+            // 2) If the cell is QUESTION/SURPRISE → ask player whether to activate it
+            if (controller.isQuestionOrSurprise(boardNumber, r, c)) {
+                int choice = JOptionPane.showConfirmDialog(
+                        this,
+                        "Activate this special cell?\n(cost according to difficulty)",
+                        "Special Cell",
+                        JOptionPane.YES_NO_OPTION
+                );
+
+                if (choice == JOptionPane.YES_OPTION) {
+                    controller.activateSpecialCellUI(boardNumber, r, c);
+                }
+            }
         }
 
+        // Final refresh after reveal/flag/activation
         refresh();
 
         if (moveCallback != null) {
-            // Both revealing and flagging count as a move, triggering turn switch
             moveCallback.run();
         }
     }
 
+
+
     /**
-     * Called by GamePanel when the turn changes.
+     * Updates the "waiting" state for this board (used when the turn changes).
      */
     public void setWaiting(boolean waiting) {
         this.waiting = waiting;
@@ -128,9 +152,8 @@ public class BoardPanel extends JPanel {
             waitLabel.setVisible(waiting);
         }
     }
-
     /**
-     * Repaint buttons according to cell state/content via controller.
+     * Refreshes the visual state of all buttons according to the controller's cell view data.
      */
     public void refresh() {
         int rows = controller.getBoardRows(boardNumber);
