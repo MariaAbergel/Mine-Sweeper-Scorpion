@@ -5,11 +5,11 @@ import Model.Difficulty;
 import Model.Game;
 import Model.GameState;
 import View.BoardPanel;
+import Controller.GameController;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import Controller.GameController;
-import javax.swing.*;
+
 import java.lang.reflect.Method;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -28,7 +28,7 @@ public class TurnSystemTest {
     @BeforeEach
     void setup() {
         controller = GameController.getInstance();
-        controller.startNewGame("MEDIUM");   // כפי שכתוב בטסטים
+        controller.startNewGame("MEDIUM");   // כמו בדרישה
         game = controller.getCurrentGame();
         assertNotNull(game);
         assertEquals(Difficulty.MEDIUM, game.getDifficulty());
@@ -54,7 +54,7 @@ public class TurnSystemTest {
     @Test
     @DisplayName("TC-BB-TURNS-001: Click on opponent board is ignored")
     void clickOnOpponentBoard_isIgnored_noScoreNoLivesNoTurnChange() {
-        // Precondition: Player 1 is active (ברירת מחדל אחרי startNewGame)
+        // Precondition: Player 1 is active
         int initialTurn = controller.getCurrentPlayerTurn();
         assertEquals(1, initialTurn, "Expected Player 1 to start");
 
@@ -64,15 +64,16 @@ public class TurnSystemTest {
         Board opponentBoardModel = game.getBoard2();
         assertNotNull(opponentBoardModel);
 
-        // יוצרים BoardPanel עבור הלוח של השחקן השני (Board 2)
+        // BoardPanel עבור הלוח של השחקן השני (Board 2)
+        // callback ריק שמקבל פרמטר ומתעלם ממנו
         BoardPanel opponentPanel = new BoardPanel(
                 controller,
                 2,          // boardNumber = 2 (לוח היריב)
                 true,       // waiting = true (כי תור של Player 1)
-                () -> {}    // moveCallback – לא עושה כלום
+                endedTurn -> { }    // moveCallback – לא עושה כלום
         );
 
-        // בוחרים תא חוקי כלשהו – נגיד (0,0)
+        // תא חוקי למשל (0,0)
         int row = 0, col = 0;
         Cell opponentCell = opponentBoardModel.getCell(row, col);
         assertNotNull(opponentCell);
@@ -113,7 +114,7 @@ public class TurnSystemTest {
         Board board1Model = game.getBoard1();
         assertNotNull(board1Model);
 
-        // בוחרים תא בטוח (לא מוקש) שעדיין HIDDEN
+        // למצוא תא בטוח (לא מוקש) ו-HIDDEN
         int row = -1, col = -1;
         outer:
         for (int r = 0; r < board1Model.getRows(); r++) {
@@ -134,12 +135,12 @@ public class TurnSystemTest {
         int initialTurn = controller.getCurrentPlayerTurn();
         int initialLives = game.getSharedLives();
 
-        // בונים BoardPanel עם moveCallback שמבצע switchTurn – כמו ב-GamePanel
+        // BoardPanel עם callback ריק (המשחק עצמו מטפל בלוגיקה)
         BoardPanel board1Panel = new BoardPanel(
                 controller,
                 1,
                 false,                      // Player 1 is not waiting
-                controller::processTurnEnd  // moveCallback מחליף תור
+                endedTurn -> { }
         );
 
         // פעולה: שחקן 1 לוחץ על תא חוקי בלוח שלו
@@ -153,10 +154,8 @@ public class TurnSystemTest {
         assertEquals(2, controller.getCurrentPlayerTurn(),
                 "Turn must switch from Player 1 to Player 2 after valid move");
 
-        // ✔ No error popup – נבדוק שאין חריגה ושמצב המשחק עדיין RUNNING
+        // ✔ Game עדיין רץ וללא שינוי בחיים לתא בטוח
         assertEquals(GameState.RUNNING, game.getGameState());
-
-        // ✔ Lives לא אמורות להשתנות על תא בטוח
         assertEquals(initialLives, game.getSharedLives());
     }
 
@@ -196,13 +195,13 @@ public class TurnSystemTest {
                 controller,
                 1,
                 false,
-                controller::processTurnEnd   // בדיוק כמו ב-GamePanel.handleMoveMade
+                endedTurn -> { }   // callback ריק
         );
         BoardPanel board2Panel = new BoardPanel(
                 controller,
                 2,
                 true,                        // P2 מחכה בשלב זה
-                controller::processTurnEnd
+                endedTurn -> { }
         );
 
         int scoreBefore = game.getSharedScore();
@@ -236,8 +235,7 @@ public class TurnSystemTest {
                 "Lives must NOT change on invalid turn");
 
         // ===== שלב 3: Player 2 מבצע מהלך חוקי בלוח B =====
-        // מעדכנים את ה-waiting (Player 2 עכשיו אקטיבי)
-        board2Panel.setWaiting(false);
+        board2Panel.setWaiting(false); // עכשיו Player 2 פעיל
 
         int p2Row = -1, p2Col = -1;
         outer2:
@@ -264,7 +262,7 @@ public class TurnSystemTest {
                 "After Player 2 move, turn should switch back to Player 1");
         assertTrue(game.getSharedScore() >= scoreBeforeP2 + 1);
 
-        // ✔ No crash, no freeze, no error popup → נבדוק שהמשחק עדיין RUNNING
+        // ✔ No crash, no freeze, no error popup → המשחק עדיין RUNNING
         assertEquals(GameState.RUNNING, game.getGameState());
     }
 }
