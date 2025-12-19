@@ -3,10 +3,6 @@ package View;
 import javax.swing.*;
 import java.awt.*;
 
-/**
- * First screen with 4 basic buttons.
- * Talks to MainFrame only via MainMenuListener.
- */
 public class MainMenuPanel extends JPanel {
 
     public interface MainMenuListener {
@@ -17,51 +13,78 @@ public class MainMenuPanel extends JPanel {
     }
 
     private final MainMenuListener listener;
+    private final BackgroundPanel bg;
+
+    private final IconButton btnStart;
+    private final IconButton btnHistory;
+    private final IconButton btnHowTo;
+    private final IconButton btnAdmin;
 
     public MainMenuPanel(MainMenuListener listener) {
         this.listener = listener;
-        initUI();
+
+        setLayout(new BorderLayout());
+
+        bg = new BackgroundPanel("/ui/menu/bg.png");
+        bg.setLayout(null);
+        add(bg, BorderLayout.CENTER);
+
+        // all buttons are PNG image buttons now
+        btnStart   = new IconButton("/ui/menu/start_new_game_btn.png", true);
+        btnHistory = new IconButton("/ui/menu/view_game_history_btn.png", true);
+        btnHowTo   = new IconButton("/ui/menu/how_to_play_btn.png", true);
+        btnAdmin   = new IconButton("/ui/menu/question_manager_btn.png", true);
+
+        btnStart.setOnClick(() -> { if (listener != null) listener.onStartGameClicked(); });
+        btnHistory.setOnClick(() -> { if (listener != null) listener.onHistoryClicked(); });
+        btnHowTo.setOnClick(() -> { if (listener != null) listener.onHowToPlayClicked(); });
+        btnAdmin.setOnClick(() -> { if (listener != null) listener.onManageQuestionsClicked(); });
+
+        bg.add(btnStart);
+        bg.add(btnHistory);
+        bg.add(btnHowTo);
+        bg.add(btnAdmin);
+
+        addComponentListener(new java.awt.event.ComponentAdapter() {
+            @Override public void componentResized(java.awt.event.ComponentEvent e) {
+                revalidate();
+                repaint();
+            }
+        });
+
     }
 
-    private void initUI() {
-        setLayout(new GridBagLayout());
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.gridx = 0;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.insets = new Insets(5, 10, 5, 10);
+    @Override
+    public void doLayout() {
+        super.doLayout();
 
-        JLabel title = new JLabel("Scorpion Minesweeper", SwingConstants.CENTER);
-        title.setFont(title.getFont().deriveFont(Font.BOLD, 20f));
+        bg.setBounds(0, 0, getWidth(), getHeight());
 
-        gbc.gridy = 0;
-        add(title, gbc);
+        int W = bg.getWidth();
+        int H = bg.getHeight();
 
-        JButton btnStartGame = new JButton("Start New Game");
-        JButton btnHistory   = new JButton("View Game History");
-        JButton btnHowToPlay = new JButton("How To Play");
-        JButton btnManageQ   = new JButton("Question Management (Admin)");
+        // 👇 MANUAL CONTROLS (CHANGE THESE)
+        int leftMargin = (int)(W * 0.18);   // move buttons left/right
+        int topStart   = (int)(H * 0.31);   // move buttons up/down
+        int btnW       = (int)(W * 0.62);   // button width
+        int btnH       = (int)(H * 0.090);  // button height
+        int gap        = (int)(H * 0.030);  // space between buttons
 
-        gbc.gridy = 1;
-        add(btnStartGame, gbc);
-        gbc.gridy = 2;
-        add(btnHistory, gbc);
-        gbc.gridy = 3;
-        add(btnHowToPlay, gbc);
-        gbc.gridy = 4;
-        add(btnManageQ, gbc);
+        int x = leftMargin;
+        int y = topStart;
 
-        // listeners
-        btnStartGame.addActionListener(e -> {
-            if (listener != null) listener.onStartGameClicked();
-        });
-        btnHistory.addActionListener(e -> {
-            if (listener != null) listener.onHistoryClicked();
-        });
-        btnHowToPlay.addActionListener(e -> {
-            if (listener != null) listener.onHowToPlayClicked();
-        });
-        btnManageQ.addActionListener(e -> {
-            if (listener != null) listener.onManageQuestionsClicked();
-        });
+        btnStart.setBounds(x, y, btnW, btnH);
+        y += btnH + gap;
+
+        btnHistory.setBounds(x, y, btnW, btnH);
+        y += btnH + gap;
+
+        btnHowTo.setBounds(x, y, btnW, btnH);
+        y += btnH + gap;
+
+        btnAdmin.setBounds(x, y, btnW, btnH);
     }
+
+
+
 }
