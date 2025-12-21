@@ -228,7 +228,7 @@ public class Game {
             return false;
         }
 
-        Question q = questionManager.getRandomQuestion();
+        Question q = questionManager.getRandomUnusedQuestionAnyLevel();
         if (q == null) {
             this.lastActionMessage = "No questions available.";
             return false;

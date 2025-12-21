@@ -2,22 +2,26 @@ package Model;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Random;
-import java.util.stream.Collectors;
+import java.util.*;
 
 /**
  * QuestionManager: loads questions from questions.csv and provides
  * accessors for game logic and admin UI.
+ *
+ * Fix: prevents repeating the same question multiple times in ONE game.
  */
 public class QuestionManager {
 
     private static final String DEFAULT_CSV = "/questions.csv";
+
     private final List<Question> questions = new ArrayList<>();
     private final Random random = new Random();
+
+    // NOTE: for saving in admin mode (file system path) - your original design
     private String csvPath = DEFAULT_CSV;
+
+    // Track used questions per game (by ID)
+    private final Set<Integer> usedQuestionIdsThisGame = new HashSet<>();
 
     public QuestionManager() {
     }
@@ -27,23 +31,27 @@ public class QuestionManager {
     }
 
     /**
-     * Loads questions from the configured CSV file.
+     * Call this at the start of every new game.
+     * (GameController.startNewGame should call it)
+     */
+    public void resetForNewGame() {
+        usedQuestionIdsThisGame.clear();
+    }
+
+    /**
+     * Loads questions from the CSV resource inside the JAR.
      * Schema: id,text,optionA,optionB,optionC,optionD,correctOption,difficultyLevel
      */
     public void loadQuestions() {
         questions.clear();
 
-        try (BufferedReader br = new BufferedReader(
-                new InputStreamReader(
-                        getClass().getResourceAsStream("/questions.csv"),
-                        StandardCharsets.UTF_8
-                )
-        )) {
-            if (br == null) {
-                System.out.println("questions.csv not found inside JAR.");
-                return;
-            }
+        InputStream in = getClass().getResourceAsStream(DEFAULT_CSV);
+        if (in == null) {
+            System.out.println("questions.csv not found inside JAR.");
+            return;
+        }
 
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8))) {
             String line;
             while ((line = br.readLine()) != null) {
                 if (line.trim().isEmpty()) continue;
@@ -64,9 +72,9 @@ public class QuestionManager {
         }
     }
 
-
     /**
-     * Saves current questions to CSV.
+     * Saves current questions to CSV (file path, not JAR resource).
+     * Used by your admin UI.
      */
     public void saveQuestions() {
         File csvFile = new File(csvPath);
@@ -80,22 +88,55 @@ public class QuestionManager {
         }
     }
 
+    // ============================================================
+    //  Unique-per-game question picking (NO repeats)
+    // ============================================================
+
     /**
-     * Returns a random question filtered by game difficulty.
-     * If no exact difficulty match exists, returns any available question.
+     * Returns a random UNUSED question that matches the given level.
+     * Returns null if there are no unused questions left for that level.
      */
-    // in Model.QuestionManager
-    public Question getRandomQuestionByLevel(Game.QuestionLevel level) {
+    public Question getRandomUnusedQuestionByLevel(Game.QuestionLevel level) {
         if (questions.isEmpty()) return null;
 
-        List<Question> filtered = questions.stream()
-                .filter(q -> q.getQuestionLevel() == level)
-                .toList();
+        List<Question> pool = new ArrayList<>();
+        for (Question q : questions) {
+            if (q.getQuestionLevel() == level && !usedQuestionIdsThisGame.contains(q.getId())) {
+                pool.add(q);
+            }
+        }
 
-        List<Question> pool = filtered.isEmpty() ? questions : filtered;
-        return pool.get(random.nextInt(pool.size()));
+        if (pool.isEmpty()) return null;
+
+        Question chosen = pool.get(random.nextInt(pool.size()));
+        usedQuestionIdsThisGame.add(chosen.getId());
+        return chosen;
     }
 
+    /**
+     * Returns a random UNUSED question from ANY level.
+     * Returns null if there are no unused questions left at all.
+     */
+    public Question getRandomUnusedQuestionAnyLevel() {
+        if (questions.isEmpty()) return null;
+
+        List<Question> pool = new ArrayList<>();
+        for (Question q : questions) {
+            if (!usedQuestionIdsThisGame.contains(q.getId())) {
+                pool.add(q);
+            }
+        }
+
+        if (pool.isEmpty()) return null;
+
+        Question chosen = pool.get(random.nextInt(pool.size()));
+        usedQuestionIdsThisGame.add(chosen.getId());
+        return chosen;
+    }
+
+    // ============================================================
+    // Existing accessors / admin helpers
+    // ============================================================
 
     public List<Question> getAllQuestions() {
         return Collections.unmodifiableList(questions);
@@ -113,6 +154,29 @@ public class QuestionManager {
 
     public void deleteQuestion(int id) {
         questions.removeIf(q -> q.getId() == id);
+        usedQuestionIdsThisGame.remove(id); // keep set clean too
+    }
+
+    // ============================================================
+    // These allow repeats and can cause the bug you described.
+    // ============================================================
+
+    /** Old behavior: random by level but CAN repeat. Avoid using in game logic. */
+    public Question getRandomQuestionByLevel(Game.QuestionLevel level) {
+        if (questions.isEmpty()) return null;
+
+        List<Question> filtered = questions.stream()
+                .filter(q -> q.getQuestionLevel() == level)
+                .toList();
+
+        List<Question> pool = filtered.isEmpty() ? questions : filtered;
+        return pool.get(random.nextInt(pool.size()));
+    }
+
+    /** Old behavior: random from all but CAN repeat. Avoid using in game logic. */
+    public Question getRandomQuestion() {
+        if (questions.isEmpty()) return null;
+        return questions.get(random.nextInt(questions.size()));
     }
 
     // --- Basic CSV parser for the simple schema (handles quoted commas) ---
@@ -120,9 +184,11 @@ public class QuestionManager {
         List<String> cols = new ArrayList<>();
         StringBuilder sb = new StringBuilder();
         boolean inQuotes = false;
+
         for (int i = 0; i < line.length(); i++) {
             char ch = line.charAt(i);
-            if (ch == '\"') {
+
+            if (ch == '"') {
                 inQuotes = !inQuotes;
             } else if (ch == ',' && !inQuotes) {
                 cols.add(sb.toString());
@@ -131,13 +197,8 @@ public class QuestionManager {
                 sb.append(ch);
             }
         }
+
         cols.add(sb.toString());
         return cols;
     }
-    public Question getRandomQuestion() {
-        if (questions.isEmpty()) return null;
-        return questions.get(random.nextInt(questions.size()));
-    }
-
 }
-
