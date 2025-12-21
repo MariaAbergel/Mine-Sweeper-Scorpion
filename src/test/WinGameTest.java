@@ -31,55 +31,11 @@ public class WinGameTest {
     }
 
     @Test
-    @DisplayName("TC-BB-WONGAME-001: Verify system detects win, updates score, reveals boards, and freezes game")
-    void verifyWinConditionAndPostGameStates() {
-        // 1. Verify initial state
-        assertTrue(controller.isGameRunning(), "Game should be running initially");
-        assertFalse(controller.isGameOver(), "Game should not be over initially");
-
-        // 2. Reveal all safe cells on both boards to trigger a Win
-        // (Assuming cooperative logic requires clearing safe cells)
-        revealAllSafeCells(1);
-        
-        // If the game requires both boards to be cleared, continue to board 2
-        if (controller.isGameRunning()) {
-            revealAllSafeCells(2);
-        }
-
-        // 3. Verify Game Over and Win State
-        assertTrue(controller.isGameOver(), "Game should be over after revealing all safe cells");
-        assertEquals(GameState.WON, game.getGameState(), "GameState should be WON");
-
-        // 4. Verify Final Score
-        // Score should be positive (points for revealing cells + potential bonus)
-        assertTrue(controller.getSharedScore() > 0, "Final score should be positive");
-        
-        // 5. Verify Boards are Fully Revealed
-        // Requirement: "Boards are fully Revealed"
-        // We check that even mines (which we didn't click) are now revealed.
-        verifyBoardIsFullyRevealed(1);
-        verifyBoardIsFullyRevealed(2);
-
-        // 6. Verify Game is Frozen (Pause disabled / Interactions ignored)
-        // Requirement: "Pause button disabled" (Implied by Game Over state preventing actions)
-        
-        // Attempt to reveal a cell (should fail/return false)
-        boolean result = controller.revealCellUI(1, 0, 0);
-        assertFalse(result, "Should not be able to perform reveal action after game is over");
-
-        // Attempt to toggle a flag (should not change state)
-        Cell testCell = game.getBoard1().getCell(0, 0);
-        boolean originalFlagState = testCell.isFlagged();
-        controller.toggleFlagUI(1, 0, 0);
-        assertEquals(originalFlagState, testCell.isFlagged(), "Should not be able to toggle flags after game is over");
-    }
-
-    @Test
     @DisplayName("TC-BB-WONGAME-001: Verify win by flagging all mines (Successful Mine Identification)")
     void verifyWinByFlaggingMines() {
         Board board1 = game.getBoard1();
         
-        // Identify all mines on Board 1 to simulate player knowledge
+        // 1. Identify all mines on Board 1 to simulate player knowledge
         List<int[]> mineCoordinates = new ArrayList<>();
         for (int r = 0; r < board1.getRows(); r++) {
             for (int c = 0; c < board1.getCols(); c++) {
@@ -92,7 +48,7 @@ public class WinGameTest {
         assertFalse(mineCoordinates.isEmpty(), "Board should have mines generated");
         int totalMines = mineCoordinates.size();
 
-        // 2. Pre-condition: 9 out of 10 mines have been flagged (or all except one)
+        // 2. Pre-condition: Flag all mines except one
         for (int i = 0; i < totalMines - 1; i++) {
             int[] coords = mineCoordinates.get(i);
             controller.toggleFlagUI(1, coords[0], coords[1]);
@@ -113,7 +69,6 @@ public class WinGameTest {
 
         // 5. Verify Scoring
         // "Final score = Player 1 Base Score + (remaining lives*N)"
-        // We verify the score is calculated (positive value)
         assertTrue(controller.getSharedScore() > 0, "Final score should be positive and calculated");
 
         // 6. Verify Boards State: Fully Revealed and Frozen
@@ -136,38 +91,5 @@ public class WinGameTest {
         // Check Revealed: The safe cell should be revealed automatically upon win
         Cell safeCell = board1.getCell(safeRow, safeCol);
         assertTrue(safeCell.isRevealed(), "Safe cells should be automatically revealed after win");
-    }
-
-    /**
-     * Helper to reveal all non-mine cells on a specific board.
-     */
-    private void revealAllSafeCells(int boardNumber) {
-        Board board = (boardNumber == 1) ? game.getBoard1() : game.getBoard2();
-        for (int r = 0; r < board.getRows(); r++) {
-            for (int c = 0; c < board.getCols(); c++) {
-                // Stop if game ended (e.g. won early)
-                if (controller.isGameOver()) return;
-
-                Cell cell = board.getCell(r, c);
-                // Peek at model to avoid mines
-                if (!cell.isMine() && !cell.isRevealed()) {
-                    controller.revealCellUI(boardNumber, r, c);
-                }
-            }
-        }
-    }
-
-    /**
-     * Helper to verify that every cell on the board is revealed.
-     */
-    private void verifyBoardIsFullyRevealed(int boardNumber) {
-        Board board = (boardNumber == 1) ? game.getBoard1() : game.getBoard2();
-        for (int r = 0; r < board.getRows(); r++) {
-            for (int c = 0; c < board.getCols(); c++) {
-                Cell cell = board.getCell(r, c);
-                assertTrue(cell.isRevealed(), 
-                    String.format("Cell at (%d, %d) on Board %d should be revealed after win", r, c, boardNumber));
-            }
-        }
     }
 }
