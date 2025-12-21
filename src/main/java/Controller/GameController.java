@@ -34,6 +34,7 @@ public class GameController {
      */
     public void startNewGame(Difficulty difficulty) {
         ensureQuestionManager();
+        questionManager.resetForNewGame();
         currentGame = new Game(difficulty);
         currentGame.setQuestionManager(questionManager);
         // Presenter is set by the View layer via registerQuestionPresenter
