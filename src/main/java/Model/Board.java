@@ -195,7 +195,7 @@ public class Board {
 
         if (cell.isUsed()) return false;
 
-        // Corrected call to Game.activateSpecialCell
+        //  only mark used if activation actually succeeded
         boolean activated = game.activateSpecialCell(this, cell.getContent());
         if (activated) {
             cell.setUsed(true);
@@ -240,6 +240,11 @@ public class Board {
 
         // If trying to PLACE a new flag, enforce max flags = number of mines
         if (!wasFlagged && flagsPlaced >= totalMines) {
+            game.setLastActionMessage(
+                    "🚫 No flags left!\n" +
+                            "You already used all " + totalMines + " flags.\n" +
+                            "Remove a flag to place a new one."
+            );
             return;
         }
 
@@ -262,7 +267,6 @@ public class Board {
             // no score reversal (as per your current design)
         }
 
-        // 🔥 CRITICAL FIX: Check for win condition after flagging
         game.checkGameStatus();
     }
 
