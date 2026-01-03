@@ -305,15 +305,14 @@ public class GamePanel extends JPanel {
             public void componentResized(java.awt.event.ComponentEvent e) {
                 requestResizeBoards();
             }
-
-            @Override
-            public void componentShown(java.awt.event.ComponentEvent e) {
-                requestResizeBoards();
-            }
         });
 
 
-        SwingUtilities.invokeLater(this::requestResizeBoards);
+
+        SwingUtilities.invokeLater(() -> {
+            requestResizeBoards();
+            requestResizeBoards(); // second pass after layout settles
+        });
 
 
     }
@@ -576,10 +575,10 @@ public class GamePanel extends JPanel {
                 return;
             }
 
-            updateCenterPadding();
             resizeBoardsToFit();
-            boardPanel1.refresh();
-            boardPanel2.refresh();
+            boardPanel1.repaint();
+            boardPanel2.repaint();
+
 
             ((Timer) e.getSource()).stop();
         });

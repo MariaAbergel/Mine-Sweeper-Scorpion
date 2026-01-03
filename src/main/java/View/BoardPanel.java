@@ -6,6 +6,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import View.IconCache;
 
 /**
  * View component for a single player's board.
@@ -290,7 +291,38 @@ public class BoardPanel extends JPanel {
                     btn.setEnabled(data.enabled);
                 }
 
-                btn.setText(data.text);
+// reset every time
+                btn.setText("");
+                btn.setIcon(null);
+                btn.setDisabledIcon(null);
+
+                String t = data.text;
+
+// --- FLAGS ---
+                if ("🚩".equals(t)) {
+                    btn.setIcon(IconCache.icon("/ui/cells/flag.png", (int)(cellSize * 0.80)));
+                    btn.setDisabledIcon(btn.getIcon());
+                }
+// --- MINES ---
+                else if ("M".equals(t)) {
+                    btn.setIcon(IconCache.icon("/ui/cells/mine.png", (int)(cellSize * 0.85)));
+                    btn.setDisabledIcon(btn.getIcon());
+                }
+// --- QUESTION ---
+                else if ("Q".equals(t)) {
+                    btn.setIcon(IconCache.icon("/ui/cells/question.png", (int)(cellSize * 0.82)));
+                    btn.setDisabledIcon(btn.getIcon());
+                }
+// --- SURPRISE ---
+                else if ("S".equals(t)) {
+                    btn.setIcon(IconCache.icon("/ui/cells/surprise.png", (int)(cellSize * 0.82)));
+                    btn.setDisabledIcon(btn.getIcon());
+                }
+// --- NUMBERS / EMPTY ---
+                else {
+                    // numbers or empty
+                    btn.setText(t);
+                }
 
                 boolean revealed = controller.isCellRevealed(boardNumber, r, c);
 
@@ -330,6 +362,10 @@ public class BoardPanel extends JPanel {
         btn.setBorderPainted(true);
         btn.setContentAreaFilled(true);
         btn.setOpaque(true);
+        btn.setHorizontalAlignment(SwingConstants.CENTER);
+        btn.setVerticalAlignment(SwingConstants.CENTER);
+        btn.setHorizontalTextPosition(SwingConstants.CENTER);
+        btn.setVerticalTextPosition(SwingConstants.CENTER);
 
         btn.setFont(new Font("Arial", Font.BOLD, 14));
         btn.setForeground(new Color(20, 20, 20));
@@ -343,6 +379,7 @@ public class BoardPanel extends JPanel {
             btn.setBorder(BorderFactory.createLineBorder(new Color(40, 90, 160, 180), 1));
             btn.setBackground(new Color(210, 230, 255));
         }
+
     }
 
 }
