@@ -35,21 +35,23 @@ public class GamePanel extends JPanel {
     private List<JLabel> heartLabels;
 
     // Control Buttons
-    private JButton btnRestart;
-    private JButton btnExit;
+    private IconButton btnRestart;
+    private IconButton btnExit;
     private final long startTimeMillis;
     private JPanel wrap1;
     private JPanel wrap2;
     private JPanel centerPanel;
     private Timer resizeStabilizer;
+    private final Runnable onBackToMenu;
 
 
 
     public GamePanel(GameController controller,
-                     String player1Name, String player2Name) {
+                     String player1Name, String player2Name,Runnable onBackToMenu) {
         this.controller = controller;
         this.player1Name = player1Name;
         this.player2Name = player2Name;
+        this.onBackToMenu = onBackToMenu;
         this.startTimeMillis = System.currentTimeMillis();
 
 
@@ -84,7 +86,6 @@ public class GamePanel extends JPanel {
         bg.setOpaque(false);
         add(bg, BorderLayout.CENTER);
 
-        // (No TOP panel – because image already has title/level)
 
         // =========================
         // CENTER: two player panels
@@ -93,7 +94,6 @@ public class GamePanel extends JPanel {
         centerPanel.setOpaque(false);
         bg.add(centerPanel, BorderLayout.CENTER);
 
-        // ----- Player 1 side -----
         // ----- Player 1 side -----
         JPanel leftSide = new JPanel(new BorderLayout());
         leftSide.setOpaque(false);
@@ -190,14 +190,17 @@ public class GamePanel extends JPanel {
         centerPanel.revalidate();
         centerPanel.repaint();
 
-        // =========================
-        // BOTTOM: score + lives + hearts + controls
-        // =========================
-        JPanel bottomOuter = new JPanel();
-        bottomOuter.setLayout(new BoxLayout(bottomOuter, BoxLayout.Y_AXIS));
-        bottomOuter.setOpaque(false);
+// =========================
+// BOTTOM FOOTER
+// =========================
+        JPanel footer = new JPanel(new BorderLayout());
+        footer.setOpaque(false);
 
-        JPanel scoreLivesPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 30, 5));
+// a bit taller so we have space to push the group down
+        footer.setPreferredSize(new Dimension(1, 145)); // 120 -> 130 (tweak)
+
+// ---- SCORE + LIVES ----
+        JPanel scoreLivesPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 30, 0));
         scoreLivesPanel.setOpaque(false);
 
         lblScore = new JLabel("SCORE: 0");
@@ -210,45 +213,68 @@ public class GamePanel extends JPanel {
 
         scoreLivesPanel.add(lblScore);
         scoreLivesPanel.add(lblLives);
-        bottomOuter.add(scoreLivesPanel);
 
+// ---- HEARTS ----
         heartsPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 3, 0));
         heartsPanel.setOpaque(false);
         buildHearts();
-        bottomOuter.add(heartsPanel);
 
-        JPanel controlsPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 25, 5));
-        controlsPanel.setOpaque(false);
+// ---- STATUS GROUP (Score/Lives ABOVE Hearts) ----
+        JPanel statusGroup = new JPanel();
+        statusGroup.setOpaque(false);
+        statusGroup.setLayout(new BoxLayout(statusGroup, BoxLayout.Y_AXIS));
 
-        btnRestart = new JButton("Restart");
-        btnExit = new JButton("Exit");
-        styleControlButton(btnRestart);
-        styleControlButton(btnExit);
+// push the whole group down a bit
+        statusGroup.add(Box.createVerticalGlue());
+        statusGroup.add(Box.createVerticalStrut(14)); // keep this (overall position)
 
-        btnExit.addActionListener(e -> {
-            controller.endGame();
-            Window window = SwingUtilities.getWindowAncestor(this);
-            if (window instanceof MainFrame frame) {
-                frame.showMainMenu();
-            }
-        });
+        statusGroup.add(Box.createVerticalStrut(6));  // ✅ NEW: moves ONLY score/lives down
+        statusGroup.add(scoreLivesPanel);
 
-        btnRestart.addActionListener(e -> {
+        statusGroup.add(Box.createVerticalStrut(10));
+        statusGroup.add(heartsPanel);
+
+
+// ---- CONTROLS BAR (buttons at very bottom) ----
+        JPanel controlsBar = new JPanel(new BorderLayout());
+        controlsBar.setOpaque(false);
+        controlsBar.setBorder(BorderFactory.createEmptyBorder(0, 30, 18, 30));
+
+        btnRestart = new IconButton("/ui/icons/restart.png", true);
+        btnExit    = new IconButton("/ui/icons/back.png", true);
+
+        btnRestart.setPreferredSize(new Dimension(40, 30));
+        btnExit.setPreferredSize(new Dimension(40, 30));
+
+        controlsBar.add(btnRestart, BorderLayout.EAST);
+        controlsBar.add(btnExit, BorderLayout.WEST);
+        btnRestart.setOnClick(() -> {
             controller.restartGame();
-            buildHearts();
+
+            // refresh view
             updateStatus();
             updateTurnUI();
             boardPanel1.refresh();
             boardPanel2.refresh();
+
+            // re-fit board sizes (after restart board might reset)
+            requestResizeBoards();
         });
 
-        controlsPanel.add(btnRestart);
-        controlsPanel.add(btnExit);
+        btnExit.setOnClick(() -> {
+            controller.endGame(); // clears currentGame
+            if (onBackToMenu != null) onBackToMenu.run(); // ✅ go to menu
+        });
 
-        bottomOuter.add(Box.createVerticalStrut(5));
-        bottomOuter.add(controlsPanel);
 
-        bg.add(bottomOuter, BorderLayout.SOUTH);
+// attach to footer
+        footer.add(statusGroup, BorderLayout.CENTER);
+        footer.add(controlsBar, BorderLayout.SOUTH);
+
+        bg.add(footer, BorderLayout.SOUTH);
+
+
+
 
         addComponentListener(new java.awt.event.ComponentAdapter() {
             @Override
@@ -269,28 +295,6 @@ public class GamePanel extends JPanel {
     }
 
 
-    /**
-     * Creates a styled label for a player's name header box.
-     */
-    private JLabel createPlayerBoxLabel(String text) {
-        JLabel lbl = new JLabel(text, SwingConstants.CENTER);
-        lbl.setForeground(Color.WHITE);
-        lbl.setFont(new Font("Arial", Font.BOLD, 20));
-        lbl.setOpaque(true);
-        lbl.setBackground(new Color(60, 60, 80));
-        lbl.setAlignmentX(Component.CENTER_ALIGNMENT);
-        lbl.setBorder(BorderFactory.createEmptyBorder(10, 30, 10, 30));
-        return lbl;
-    }
-
-    /**
-     * Applies consistent styling to control buttons.
-     */
-    private void styleControlButton(JButton btn) {
-        btn.setFont(new Font("Arial", Font.BOLD, 18));
-        btn.setFocusPainted(false);
-        btn.setMargin(new Insets(3, 12, 3, 12));
-    }
 
     /**
      * Builds the row of heart icons according to the starting number of lives.
@@ -468,40 +472,45 @@ public class GamePanel extends JPanel {
     }
 
     private void resizeBoardsToFit() {
-        if (wrap1 == null || wrap2 == null) return;
+        if (wrap1 == null || wrap2 == null || boardPanel1 == null || boardPanel2 == null) return;
 
-        int windowHeight = getHeight();
-        String difficulty = controller.getDifficultyName();
+        // available space where the board is placed (both sides)
+        int availW = Math.min(wrap1.getWidth(), wrap2.getWidth());
+        int availH = Math.min(wrap1.getHeight(), wrap2.getHeight());
+        if (availW <= 0 || availH <= 0) return;
 
-        int baseCell;
+        String diff = controller.getDifficultyName();
 
-        // Different strategy: set FIXED sizes per difficulty
-        switch (difficulty) {
-            case "EASY" -> {
-                // Easy: nice big cells
-                if (windowHeight < 650) baseCell = 48;
-                else if (windowHeight < 800) baseCell = 42;
-                else baseCell = 36;
-            }
-            case "MEDIUM" -> {
-                // Medium: same as Easy (both have similar grid sizes)
-                if (windowHeight < 650) baseCell = 35;
-                else if (windowHeight < 800) baseCell = 32;
-                else baseCell = 28;
-            }
-            case "HARD" -> {
-                // Hard: slightly smaller (16x16 grid needs to fit)
-                if (windowHeight < 650) baseCell = 28;
-                else if (windowHeight < 800) baseCell = 26;
-                else baseCell = 24;
-            }
-            default -> baseCell = 36;
+        // grid size by difficulty (adjust if yours are different!)
+        int rows, cols;
+        switch (diff) {
+            case "EASY" -> { rows = 10; cols = 10; }
+            case "MEDIUM" -> { rows = 14; cols = 14; }
+            case "HARD" -> { rows = 16; cols = 16; }
+            default -> { rows = 10; cols = 10; }
         }
 
-        // No capping needed - we're using reasonable values
-        boardPanel1.setCellSize(baseCell);
-        boardPanel2.setCellSize(baseCell);
+        // leave a little margin inside the wrapper so it doesn't touch
+        int margin = 20;
+        int usableW = Math.max(1, availW - margin);
+        int usableH = Math.max(1, availH - margin);
+
+        // compute max cell size that fits both width and height
+        int cellByW = usableW / cols;
+        int cellByH = usableH / rows;
+        int cell = Math.min(cellByW, cellByH);
+
+        // clamp to keep it pretty (optional)
+        int minCell = 18;
+        int maxCell = diff.equals("EASY") ? 48 : (diff.equals("MEDIUM") ? 35 : 28);
+        cell = Math.max(minCell, Math.min(maxCell, cell));
+
+        boardPanel1.setCellSize(cell);
+        boardPanel2.setCellSize(cell);
     }
+
+
+
 
 
 
@@ -552,9 +561,8 @@ public class GamePanel extends JPanel {
 
         resizeStabilizer.setRepeats(true);
         resizeStabilizer.start();
-    }
+    }}
 
 
 
 
-}
