@@ -109,40 +109,27 @@ public class BoardPanel extends JPanel {
 
         for (int r = 0; r < rows; r++) {
             for (int c = 0; c < cols; c++) {
+
                 final int rr = r;
                 final int cc = c;
 
                 JButton btn = new JButton();
                 btn.setMargin(new Insets(0, 0, 0, 0));
-                btn.setFocusable(false);
 
-                // Make each cell match the board sizing
+                //  style AFTER creating button
+                styleCellButton(btn);
+
+                // size
                 btn.setPreferredSize(new Dimension(this.cellSize, this.cellSize));
 
-
-                // LEFT CLICK → reveal
+                // clicks...
                 btn.addActionListener(e -> handleClick(rr, cc, false));
 
-                // RIGHT CLICK → flag / unflag
                 btn.addMouseListener(new MouseAdapter() {
                     @Override
                     public void mouseClicked(MouseEvent e) {
                         if (SwingUtilities.isRightMouseButton(e)) {
                             handleClick(rr, cc, true);
-                        }
-                    }
-
-                    @Override
-                    public void mouseEntered(MouseEvent e) {
-                        if (waiting) {
-                            BoardPanel.this.repaint();
-                        }
-                    }
-
-                    @Override
-                    public void mouseExited(MouseEvent e) {
-                        if (waiting) {
-                            BoardPanel.this.repaint();
                         }
                     }
                 });
@@ -153,6 +140,7 @@ public class BoardPanel extends JPanel {
         }
 
         refresh();
+
     }
 
 
@@ -303,11 +291,60 @@ public class BoardPanel extends JPanel {
                 }
 
                 btn.setText(data.text);
+
+                boolean revealed = controller.isCellRevealed(boardNumber, r, c);
+
+                if (boardNumber == 1) {
+                    if (!revealed) {
+                        btn.setBackground(new Color(255, 165, 165));
+                        btn.setForeground(Color.BLACK);
+                        btn.setBorder(BorderFactory.createLineBorder(
+                                new Color(184, 82, 82, 140), 1)); // ← lighter grid
+                    } else {
+                        btn.setBackground(new Color(255, 215, 215));
+                        btn.setForeground(new Color(40, 40, 40));
+                        btn.setBorder(BorderFactory.createLineBorder(
+                                new Color(200, 150, 150, 120), 1)); // even softer
+                    }
+                }
+                else {
+                    if (!revealed) {
+                        btn.setBackground(new Color(210, 230, 255));
+                        btn.setBorder(BorderFactory.createLineBorder(new Color(40, 90, 160, 180), 1));
+                    } else {
+                        btn.setBackground(new Color(235, 235, 235));
+                        btn.setBorder(BorderFactory.createLineBorder(new Color(120, 120, 120, 120), 1));
+                    }
+                }
+
+
             }
         }
         revalidate();
         repaint();
     }
 
+    private void styleCellButton(JButton btn) {
+        btn.setFocusable(false);
+        btn.setFocusPainted(false);
+        btn.setBorderPainted(true);
+        btn.setContentAreaFilled(true);
+        btn.setOpaque(true);
+
+        btn.setFont(new Font("Arial", Font.BOLD, 14));
+        btn.setForeground(new Color(20, 20, 20));
+
+        if (boardNumber == 1) {
+            // red board grid color (a bit darker than cell)
+            btn.setBorder(BorderFactory.createLineBorder(new Color(190, 120, 120, 140), 1));
+            btn.setBackground(new Color(255, 165, 165));
+        } else {
+            // blue board grid color
+            btn.setBorder(BorderFactory.createLineBorder(new Color(40, 90, 160, 180), 1));
+            btn.setBackground(new Color(210, 230, 255));
+        }
+    }
 
 }
+
+

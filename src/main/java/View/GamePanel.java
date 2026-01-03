@@ -102,7 +102,7 @@ public class GamePanel extends JPanel {
         JPanel leftTop = new JPanel();
         leftTop.setLayout(new BoxLayout(leftTop, BoxLayout.Y_AXIS));
         leftTop.setOpaque(false);
-        leftTop.setBorder(BorderFactory.createEmptyBorder(42, 0, 0, 0)); // ← ADD THIS LINE (40px top padding)
+        leftTop.setBorder(BorderFactory.createEmptyBorder(42, 0, 0, 0));
 
         playerBox1 = new NeonInputField(new Color(255, 80, 80));
         playerBox1.setText(player1Name);
@@ -110,7 +110,7 @@ public class GamePanel extends JPanel {
         playerBox1.setAlignmentX(Component.CENTER_ALIGNMENT);
         playerBox1.setFieldWidth(210); // half of 420
         leftTop.add(playerBox1);
-        leftTop.add(Box.createVerticalStrut(5));
+        leftTop.add(Box.createVerticalStrut(20));
 
         lblMinesLeft1 = new JLabel("MINES LEFT: " + controller.getTotalMines(1), SwingConstants.CENTER);
         lblMinesLeft1.setForeground(Color.WHITE);
@@ -123,7 +123,7 @@ public class GamePanel extends JPanel {
         leftTopWrapper.setOpaque(false);
 
         leftTopWrapper.setBorder(
-                BorderFactory.createEmptyBorder(70, 0, 0, 0)
+                BorderFactory.createEmptyBorder(90, 0, 0, 0)
         );
 
         leftTopWrapper.add(leftTop, BorderLayout.CENTER);
@@ -133,11 +133,23 @@ public class GamePanel extends JPanel {
         boardPanel1 = new BoardPanel(controller, 1, false, this::handleMoveMade);
         boardPanel1.setOpaque(false);
 
+        NeonFramePanel leftGlow = new NeonFramePanel(new Color(255, 80, 80), 14, 24);
+        leftGlow.add(boardPanel1, new GridBagConstraints());
+
         wrap1 = new JPanel(new GridBagLayout());
         wrap1.setOpaque(false);
 
-        wrap1.add(boardPanel1, new GridBagConstraints()); // centered
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.fill = GridBagConstraints.NONE;     // ✅ DO NOT stretch
+        gbc.weightx = 0;
+        gbc.weighty = 0;
+
+        wrap1.add(leftGlow, gbc);
         leftSide.add(wrap1, BorderLayout.CENTER);
+
 
         // ----- Player 2 side -----
         JPanel rightSide = new JPanel(new BorderLayout());
@@ -147,7 +159,7 @@ public class GamePanel extends JPanel {
         JPanel rightTop = new JPanel();
         rightTop.setLayout(new BoxLayout(rightTop, BoxLayout.Y_AXIS));
         rightTop.setOpaque(false);
-        rightTop.setBorder(BorderFactory.createEmptyBorder(42, 0, 0, 0)); // ← ADD THIS LINE (40px top padding)
+        rightTop.setBorder(BorderFactory.createEmptyBorder(42, 0, 0, 0));
 
         playerBox2 = new NeonInputField(new Color(80, 180, 255));
         playerBox2.setText(player2Name);
@@ -155,7 +167,7 @@ public class GamePanel extends JPanel {
         playerBox2.setAlignmentX(Component.CENTER_ALIGNMENT);
         playerBox2.setFieldWidth(210); // half of 420
         rightTop.add(playerBox2);
-        rightTop.add(Box.createVerticalStrut(5));
+        rightTop.add(Box.createVerticalStrut(20));
 
         lblMinesLeft2 = new JLabel("MINES LEFT: " + controller.getTotalMines(2), SwingConstants.CENTER);
         lblMinesLeft2.setForeground(Color.WHITE);
@@ -168,7 +180,7 @@ public class GamePanel extends JPanel {
         rightTopWrapper.setOpaque(false);
 
         rightTopWrapper.setBorder(
-                BorderFactory.createEmptyBorder(70, 0, 0, 0)
+                BorderFactory.createEmptyBorder(90, 0, 0, 0)
         );
 
         rightTopWrapper.add(rightTop, BorderLayout.CENTER);
@@ -178,11 +190,23 @@ public class GamePanel extends JPanel {
         boardPanel2 = new BoardPanel(controller, 2, true, this::handleMoveMade);
         boardPanel2.setOpaque(false);
 
+        NeonFramePanel rightGlow = new NeonFramePanel(new Color(80, 180, 255), 14, 24);
+        rightGlow.add(boardPanel2, new GridBagConstraints());
+
         wrap2 = new JPanel(new GridBagLayout());
         wrap2.setOpaque(false);
 
-        wrap2.add(boardPanel2, new GridBagConstraints()); // centered
+        GridBagConstraints gbc2 = new GridBagConstraints();
+        gbc2.gridx = 0;
+        gbc2.gridy = 0;
+        gbc2.anchor = GridBagConstraints.CENTER;
+        gbc2.fill = GridBagConstraints.NONE;    // ✅ DO NOT stretch
+        gbc2.weightx = 0;
+        gbc2.weighty = 0;
+
+        wrap2.add(rightGlow, gbc2);
         rightSide.add(wrap2, BorderLayout.CENTER);
+
 
         centerPanel.removeAll();
         centerPanel.add(leftSide);
@@ -228,7 +252,7 @@ public class GamePanel extends JPanel {
         statusGroup.add(Box.createVerticalGlue());
         statusGroup.add(Box.createVerticalStrut(14)); // keep this (overall position)
 
-        statusGroup.add(Box.createVerticalStrut(6));  // ✅ NEW: moves ONLY score/lives down
+        statusGroup.add(Box.createVerticalStrut(6));  //  moves ONLY score/lives down
         statusGroup.add(scoreLivesPanel);
 
         statusGroup.add(Box.createVerticalStrut(10));
@@ -263,7 +287,7 @@ public class GamePanel extends JPanel {
 
         btnExit.setOnClick(() -> {
             controller.endGame(); // clears currentGame
-            if (onBackToMenu != null) onBackToMenu.run(); // ✅ go to menu
+            if (onBackToMenu != null) onBackToMenu.run(); // go to menu
         });
 
 
