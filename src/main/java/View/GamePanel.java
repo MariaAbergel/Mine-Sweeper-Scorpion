@@ -32,7 +32,7 @@ public class GamePanel extends JPanel {
     private JLabel lblScore;
     private JLabel lblLives;
     private JPanel heartsPanel;
-    private List<JLabel> heartLabels;
+    private java.util.List<NeonHeart> heartLabels;
 
     // Control Buttons
     private IconButton btnRestart;
@@ -215,7 +215,7 @@ public class GamePanel extends JPanel {
         scoreLivesPanel.add(lblLives);
 
 // ---- HEARTS ----
-        heartsPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 3, 0));
+        heartsPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 6, 0));
         heartsPanel.setOpaque(false);
         buildHearts();
 
@@ -304,16 +304,21 @@ public class GamePanel extends JPanel {
         int maxLives = controller.getMaxLives();
 
         heartsPanel.removeAll();
+
+        Color heartFill = new Color(255, 70, 70);      // softer red
+        Color glow      = new Color(255, 40, 40);      // subtle halo
+
+
         for (int i = 0; i < maxLives; i++) {
-            JLabel heart = new JLabel("❤");
-            heart.setFont(new Font("Dialog", Font.PLAIN, 22));
-            heart.setForeground(Color.RED);
+            NeonHeart heart = new NeonHeart(heartFill, glow);
             heartLabels.add(heart);
             heartsPanel.add(heart);
         }
+
         heartsPanel.revalidate();
         heartsPanel.repaint();
     }
+
 
     /**
      * Called after each move from a BoardPanel.
@@ -426,14 +431,10 @@ public class GamePanel extends JPanel {
         int max = controller.getMaxLives();
 
         for (int i = 0; i < max && i < heartLabels.size(); i++) {
-            JLabel heart = heartLabels.get(i);
-            if (i < lives) {
-                heart.setForeground(Color.RED);
-            } else {
-                heart.setForeground(Color.DARK_GRAY);
-            }
+            heartLabels.get(i).setActive(i < lives);
         }
     }
+
 
     /**
      * Handles the visual changes and dialog when the game ends.
