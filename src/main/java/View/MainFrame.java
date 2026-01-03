@@ -65,7 +65,7 @@ public class MainFrame extends JFrame
         setContentPane(cardPanel);
 
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(900, 700);
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
         setLocationRelativeTo(null);
 
         // show first screen

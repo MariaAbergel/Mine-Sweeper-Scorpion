@@ -15,12 +15,14 @@ public class BoardPanel extends JPanel {
 
     private final GameController controller;
     private final int boardNumber;   // 1 or 2
-
     public interface MoveCallback {
         // endedTurn = true → a real reveal happened
         // endedTurn = false → only flag/unflag
         void onMove(boolean endedTurn);
     }
+    private static final int MIN_CELL = 18;
+    private static final int MAX_CELL = 80;   // <-- bigger than 60 so Medium/Hard can grow more
+    private int cellSize = 40;
 
     private final MoveCallback moveCallback;
     private JButton[][] buttons;
@@ -39,6 +41,36 @@ public class BoardPanel extends JPanel {
         initComponents();
     }
 
+    public void setCellSize(int newSize) {
+        int maxCell = 120; // אפשר להשאיר ככה, הגבלת גודל תאים
+        newSize = Math.max(MIN_CELL, Math.min(newSize, maxCell));
+
+        this.cellSize = newSize;
+
+        int rows = controller.getBoardRows(boardNumber);
+        int cols = controller.getBoardCols(boardNumber);
+
+        Dimension pref = new Dimension(cols * cellSize, rows * cellSize);
+
+        setPreferredSize(pref);
+        setMinimumSize(new Dimension(cols * MIN_CELL, rows * MIN_CELL));
+        setMaximumSize(pref); // חשוב ל-GridBag שלא “ישחק” לך עם זה
+
+        if (buttons != null) {
+            for (int r = 0; r < rows; r++) {
+                for (int c = 0; c < cols; c++) {
+                    buttons[r][c].setPreferredSize(new Dimension(cellSize, cellSize));
+                }
+            }
+        }
+
+        revalidate();
+        repaint();
+    }
+
+
+
+
     /**
      * Builds the board UI: grid of buttons.
      */
@@ -46,9 +78,32 @@ public class BoardPanel extends JPanel {
         int rows = controller.getBoardRows(boardNumber);
         int cols = controller.getBoardCols(boardNumber);
 
-        setLayout(new GridLayout(rows, cols));
-        setBackground(Color.BLACK);
+        // Auto cell size based on grid size - START WITH LARGER VALUES
+        int maxDim = Math.max(rows, cols);
+
+        if (maxDim <= 9) {
+            this.cellSize = 48;  // Easy: 9x9
+        } else if (maxDim <= 13) {  // ← Changed from 12 to 13
+            this.cellSize = 42;  // Medium: 13x13 - START BIGGER
+        } else {
+            this.cellSize = 30;  // Hard: 16x16
+        }
+
+// try 38-45 until it fits your background nicely
+
+        // Let the board have a REAL preferred size (so it won't stretch huge)
+        setLayout(new GridLayout(rows, cols, 0, 0));
+        setOpaque(false);                // important: don't paint a solid bg
         setDoubleBuffered(true);
+
+        // This forces Swing to keep the board at this size (when wrapped properly)
+
+        Dimension pref = new Dimension(cols * this.cellSize, rows * this.cellSize);
+        setPreferredSize(pref);
+
+// minimum should be based on MIN_CELL, not current cellSize
+        Dimension min = new Dimension(cols * MIN_CELL, rows * MIN_CELL);
+        setMinimumSize(min);
 
         buttons = new JButton[rows][cols];
 
@@ -60,7 +115,10 @@ public class BoardPanel extends JPanel {
                 JButton btn = new JButton();
                 btn.setMargin(new Insets(0, 0, 0, 0));
                 btn.setFocusable(false);
-                btn.setPreferredSize(new Dimension(25, 25));
+
+                // Make each cell match the board sizing
+                btn.setPreferredSize(new Dimension(this.cellSize, this.cellSize));
+
 
                 // LEFT CLICK → reveal
                 btn.addActionListener(e -> handleClick(rr, cc, false));
@@ -77,7 +135,6 @@ public class BoardPanel extends JPanel {
                     @Override
                     public void mouseEntered(MouseEvent e) {
                         if (waiting) {
-                            // כשמעבירים עכבר – נצייר שוב את שכבת ה-WAIT
                             BoardPanel.this.repaint();
                         }
                     }
@@ -97,6 +154,7 @@ public class BoardPanel extends JPanel {
 
         refresh();
     }
+
 
 
     @Override
@@ -181,7 +239,7 @@ public class BoardPanel extends JPanel {
                     boolean activated = controller.activateSpecialCellUI(boardNumber, r, c);
                     endedTurn = activated; // activation success ends turn
                 } else {
-                    // ✅ NO ends turn ONLY if the cell was revealed NOW (this click)
+                    //  NO ends turn ONLY if the cell was revealed NOW (this click)
                     endedTurn = revealedNow;
                 }
 
@@ -250,4 +308,6 @@ public class BoardPanel extends JPanel {
         revalidate();
         repaint();
     }
+
+
 }
