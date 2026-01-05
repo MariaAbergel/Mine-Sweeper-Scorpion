@@ -33,7 +33,7 @@ public class Game {
     private int totalQuestionsAnswered;
     private int totalCorrectAnswers;
 
-    // ✅ Factory Method registry (DP1)
+    //  Factory Method registry (DP1)
     private final ActivatorFactoryRegistry activatorRegistry =
             new ActivatorFactoryRegistry(
                     new QuestionActivatorFactory(),
