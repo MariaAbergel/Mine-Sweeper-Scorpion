@@ -9,9 +9,9 @@ import java.net.URL;
 /**
  * Main application frame.
  * Manages navigation between:
- *  - MainMenuPanel (home screen)
- *  - StartPanel    (enter players + difficulty)
- *  - GamePanel     (actual game)
+ * - MainMenuPanel (home screen)
+ * - StartPanel    (enter players + difficulty)
+ * - GamePanel     (actual game)
  *
  * Communicates with the Model layer only through GameController (MVC).
  */
@@ -26,6 +26,10 @@ public class MainFrame extends JFrame
     private MainMenuPanel mainMenuPanel;
     private StartPanel startPanel;
     private GamePanel gamePanel;   // created when starting a game
+
+    // Styling constants
+    private static final Color BG_COLOR = Color.BLACK;
+    private static final Color ACCENT_COLOR = new Color(0, 255, 255); // Cyan neon
 
     public MainFrame() {
         super("Scorpion Minesweeper");
@@ -65,7 +69,7 @@ public class MainFrame extends JFrame
         setContentPane(cardPanel);
 
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setExtendedState(JFrame.MAXIMIZED_BOTH);
+        setSize(900, 700);
         setLocationRelativeTo(null);
 
         // show first screen
@@ -89,23 +93,20 @@ public class MainFrame extends JFrame
             cardPanel.remove(gamePanel);
         }
 
+        // Pass a callback to return to the menu when the game ends
         gamePanel = new GamePanel(
                 controller,
                 player1Name,
                 player2Name,
                 () -> {
-                    controller.endGame();
+                    // Action to perform when back/exit is clicked in GamePanel
                     cardLayout.show(cardPanel, "MENU");
                 }
         );
 
         cardPanel.add(gamePanel, "GAME");
         cardLayout.show(cardPanel, "GAME");
-
-        cardPanel.revalidate();
-        cardPanel.repaint();
     }
-
 
     /**
      * Callback from StartPanel when the user presses the BACK button.
@@ -207,44 +208,107 @@ public class MainFrame extends JFrame
 
     /**
      * Simple admin gate for Question Management.
-     * You can change the password or later replace it with a real login.
+     * Uses a custom styled dialog.
      */
     private void handleAdminQuestionManagement() {
-        JPasswordField pwd = new JPasswordField();
-        int result = JOptionPane.showConfirmDialog(
-                this,
-                pwd,
-                "Admin password:",
-                JOptionPane.OK_CANCEL_OPTION,
-                JOptionPane.PLAIN_MESSAGE
-        );
+        JDialog dialog = new JDialog(this, "Admin Access", true);
+        dialog.setUndecorated(true); // Remove window decorations for cleaner look
+        dialog.setLayout(new BorderLayout());
 
-        if (result != JOptionPane.OK_OPTION) {
-            return;
-        }
+        JPanel content = new JPanel(new BorderLayout(10, 10));
+        content.setBackground(BG_COLOR);
+        content.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ACCENT_COLOR, 2),
+                BorderFactory.createEmptyBorder(30, 20, 20, 20)
+        ));
 
-        String input = new String(pwd.getPassword());
+        // --- FIX: Using standard JLabel so text is always visible ---
+        JLabel lbl = new JLabel("Enter Admin Password:", SwingConstants.CENTER);
+        lbl.setForeground(Color.WHITE);
+        lbl.setFont(new Font("Arial", Font.BOLD, 16));
 
-        if (!"ADMIN".equals(input)) {
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Access denied.",
-                    "Wrong password",
-                    JOptionPane.ERROR_MESSAGE
-            );
-            return;
-        }
+        JPasswordField pwd = new JPasswordField(15);
+        pwd.setBackground(new Color(20, 20, 20));
+        pwd.setForeground(ACCENT_COLOR);
+        pwd.setCaretColor(ACCENT_COLOR);
+        pwd.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ACCENT_COLOR),
+                BorderFactory.createEmptyBorder(2, 5, 2, 5)
+        ));
+        pwd.setFont(new Font("Arial", Font.PLAIN, 16));
 
-        // open your existing QuestionManagementFrame
-        QuestionManagementFrame frame =
-                new QuestionManagementFrame(controller.getQuestionManager());
-        frame.setVisible(true);
+        // Wrap password field in a panel to prevent stretching
+        JPanel pwdPanel = new JPanel();
+        pwdPanel.setBackground(BG_COLOR);
+        pwdPanel.add(pwd);
+
+        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 0));
+        btnPanel.setBackground(BG_COLOR);
+
+        JButton btnOk = createStyledButton("OK");
+        JButton btnCancel = createStyledButton("Cancel");
+
+        btnPanel.add(btnOk);
+        btnPanel.add(btnCancel);
+
+        content.add(lbl, BorderLayout.NORTH);
+        content.add(pwdPanel, BorderLayout.CENTER);
+        content.add(btnPanel, BorderLayout.SOUTH);
+
+        dialog.add(content);
+        dialog.pack();
+        dialog.setLocationRelativeTo(this);
+
+        btnCancel.addActionListener(e -> dialog.dispose());
+
+        // Handle "OK" button
+        btnOk.addActionListener(e -> {
+            String input = new String(pwd.getPassword());
+            if ("ADMIN".equals(input)) {
+                dialog.dispose();
+                QuestionManagementFrame frame =
+                        new QuestionManagementFrame(controller.getQuestionManager());
+                frame.setVisible(true);
+            } else {
+                JOptionPane.showMessageDialog(dialog,
+                        "Access denied.",
+                        "Wrong password",
+                        JOptionPane.ERROR_MESSAGE);
+                pwd.setText("");
+            }
+        });
+
+        // Allow "Enter" key to submit
+        dialog.getRootPane().setDefaultButton(btnOk);
+
+        dialog.setVisible(true);
+    }
+
+    private JButton createStyledButton(String text) {
+        JButton btn = new JButton(text);
+        btn.setBackground(new Color(40, 40, 40));
+        btn.setForeground(ACCENT_COLOR);
+        btn.setFont(new Font("Arial", Font.BOLD, 14));
+        btn.setFocusPainted(false);
+        btn.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ACCENT_COLOR, 1),
+                BorderFactory.createEmptyBorder(5, 15, 5, 15)
+        ));
+
+        btn.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                btn.setBackground(new Color(60, 60, 60));
+            }
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                btn.setBackground(new Color(40, 40, 40));
+            }
+        });
+        return btn;
     }
 
     public void showMainMenu() {
         cardLayout.show(cardPanel, "MENU");
     }
-
 
     // =================================================================
     //  Application entry point
@@ -253,6 +317,4 @@ public class MainFrame extends JFrame
     public static void main(String[] args) {
         SwingUtilities.invokeLater(MainFrame::new);
     }
-
-
 }

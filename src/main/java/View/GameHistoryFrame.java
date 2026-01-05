@@ -20,7 +20,7 @@ public class GameHistoryFrame extends JFrame {
 
     private final GameController controller;
 
-    // Models need to be fields so we can update them in reloadTables()
+    // Models
     private final DefaultTableModel gamesModel;
     private final DefaultTableModel playersModel;
 
@@ -77,9 +77,21 @@ public class GameHistoryFrame extends JFrame {
         JTable playersTable = createStyledTable(playersModel);
 
         // ====== FILTER / SEARCH BAR (Top) ======
-        JPanel filterPanel = new JPanel(new BorderLayout());
-        filterPanel.setBackground(new Color(0, 0, 0, 200));
+
+        // --- FIX STARTS HERE ---
+        // We override paintComponent and setOpaque(false) to handle the semi-transparent black background correctly.
+        JPanel filterPanel = new JPanel(new BorderLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                g.setColor(getBackground());
+                g.fillRect(0, 0, getWidth(), getHeight());
+                super.paintComponent(g);
+            }
+        };
+        filterPanel.setBackground(new Color(0, 0, 0, 200)); // Semi-transparent black
+        filterPanel.setOpaque(false); // <--- CRITICAL FIX: Tells Swing to paint what's behind it first
         filterPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        // --- FIX ENDS HERE ---
 
         // Left: difficulty + result combos
         JPanel leftFilters = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 5));
@@ -121,18 +133,14 @@ public class GameHistoryFrame extends JFrame {
         searchField.addActionListener(e -> reloadTables());
 
         // ====== CENTER CONTENT (Background + Tables) ======
-
-        // This path must match exactly where your image is in the resources folder
-        // For example: src/main/resources/ui/menu/bg.png -> "/ui/menu/bg.png"
         BackgroundPanel content = new BackgroundPanel("/ui/menu/backgroundGameHistory.png");
         content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
-        content.setBorder(BorderFactory.createEmptyBorder(10, 30, 20, 30)); // Added side padding
+        content.setBorder(BorderFactory.createEmptyBorder(10, 30, 20, 30));
 
         JScrollPane gamesScroll = createStyledScrollPane(gamesTable);
         JScrollPane playersScroll = createStyledScrollPane(playersTable);
 
-        // --- VERTICAL SPACER ADJUSTMENT ---
-        // Changed from 130 to 160 to push the table down below the title
+        // Spacer to push tables down below title
         content.add(Box.createVerticalStrut(160));
 
         // Add Tables

@@ -4,7 +4,9 @@ import Model.Question;
 import Model.QuestionManager;
 
 import javax.swing.*;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.JTableHeader;
 import java.awt.*;
 import java.net.URL;
 import java.util.ArrayList;
@@ -12,11 +14,20 @@ import java.util.List;
 
 /**
  * Simple admin/debug screen to view/add/edit/delete questions and persist to CSV.
+ * Styled with the "black neon" theme.
  */
 public class QuestionManagementFrame extends JFrame {
 
     private final QuestionManager manager;
     private final DefaultTableModel model;
+
+    // Colors (Same as GameHistoryFrame)
+    private static final Color BG_COLOR = Color.BLACK;
+    private static final Color TEXT_COLOR = Color.WHITE;
+    private static final Color ACCENT_COLOR = new Color(0, 255, 255); // Cyan neon
+    private static final Color TABLE_HEADER_BG = new Color(30, 30, 30);
+    private static final Color TABLE_ROW_BG = new Color(20, 20, 20);
+    private static final Color TABLE_SELECTION_BG = new Color(60, 60, 80);
 
     public QuestionManagementFrame(QuestionManager manager) {
         super("Question Management");
@@ -41,13 +52,13 @@ public class QuestionManagementFrame extends JFrame {
             }
         };
 
-        JTable table = new JTable(model);
-        JScrollPane scroll = new JScrollPane(table);
+        JTable table = createStyledTable(model);
+        JScrollPane scroll = createStyledScrollPane(table);
 
-        JButton btnAdd = new JButton("Add");
-        JButton btnEdit = new JButton("Edit");
-        JButton btnDelete = new JButton("Delete");
-        JButton btnSave = new JButton("Save");
+        JButton btnAdd = createStyledButton("Add");
+        JButton btnEdit = createStyledButton("Edit");
+        JButton btnDelete = createStyledButton("Delete");
+        JButton btnSave = createStyledButton("Save");
 
         btnAdd.addActionListener(e -> addQuestion());
         btnEdit.addActionListener(e -> editQuestion(table.getSelectedRow()));
@@ -55,19 +66,94 @@ public class QuestionManagementFrame extends JFrame {
         btnSave.addActionListener(e -> saveQuestions());
 
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        btnPanel.setBackground(BG_COLOR);
+        btnPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         btnPanel.add(btnAdd);
         btnPanel.add(btnEdit);
         btnPanel.add(btnDelete);
         btnPanel.add(btnSave);
 
-        setLayout(new BorderLayout());
-        add(scroll, BorderLayout.CENTER);
-        add(btnPanel, BorderLayout.SOUTH);
+        // Use BackgroundPanel for the main content
+        BackgroundPanel content = new BackgroundPanel("/ui/menu/bg.png");
+        content.setLayout(new BorderLayout());
+        
+        // Increased top padding to 100 to push table down
+        content.setBorder(BorderFactory.createEmptyBorder(100, 20, 10, 20));
+
+        // Removed the NeonTextLabel title so the background title is visible
+        content.add(scroll, BorderLayout.CENTER);
+        content.add(btnPanel, BorderLayout.SOUTH);
+
+        setContentPane(content);
 
         loadTable();
 
-        setSize(800, 400);
+        setSize(900, 600);
         setLocationRelativeTo(null);
+    }
+
+    // =======================
+    //   STYLING HELPERS
+    // =======================
+
+    private JTable createStyledTable(DefaultTableModel model) {
+        JTable table = new JTable(model);
+        table.setBackground(TABLE_ROW_BG);
+        table.setForeground(TEXT_COLOR);
+        table.setSelectionBackground(TABLE_SELECTION_BG);
+        table.setSelectionForeground(TEXT_COLOR);
+        table.setGridColor(new Color(50, 50, 50));
+        table.setRowHeight(25);
+        table.setFont(new Font("Arial", Font.PLAIN, 14));
+        table.getTableHeader().setReorderingAllowed(false);
+
+        // Header styling
+        JTableHeader header = table.getTableHeader();
+        header.setBackground(TABLE_HEADER_BG);
+        header.setForeground(ACCENT_COLOR);
+        header.setFont(new Font("Arial", Font.BOLD, 14));
+        ((DefaultTableCellRenderer)header.getDefaultRenderer()).setHorizontalAlignment(JLabel.CENTER);
+
+        // Center cell content
+        DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
+        centerRenderer.setHorizontalAlignment(JLabel.CENTER);
+        centerRenderer.setBackground(TABLE_ROW_BG);
+        centerRenderer.setForeground(TEXT_COLOR);
+        for (int i = 0; i < table.getColumnCount(); i++) {
+            table.getColumnModel().getColumn(i).setCellRenderer(centerRenderer);
+        }
+
+        return table;
+    }
+
+    private JScrollPane createStyledScrollPane(JComponent view) {
+        JScrollPane scroll = new JScrollPane(view);
+        scroll.getViewport().setBackground(BG_COLOR);
+        scroll.setBorder(BorderFactory.createLineBorder(new Color(60, 60, 60)));
+        return scroll;
+    }
+
+    private JButton createStyledButton(String text) {
+        JButton btn = new JButton(text);
+        btn.setBackground(new Color(40, 40, 40));
+        btn.setForeground(ACCENT_COLOR);
+        btn.setFont(new Font("Arial", Font.BOLD, 14));
+        btn.setFocusPainted(false);
+        btn.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ACCENT_COLOR, 1),
+                BorderFactory.createEmptyBorder(5, 15, 5, 15)
+        ));
+
+        // Hover effect
+        btn.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                btn.setBackground(new Color(60, 60, 60));
+            }
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                btn.setBackground(new Color(40, 40, 40));
+            }
+        });
+        return btn;
     }
 
     private void loadTable() {
@@ -174,4 +260,3 @@ public class QuestionManagementFrame extends JFrame {
         }
     }
 }
-
