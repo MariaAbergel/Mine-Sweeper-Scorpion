@@ -88,6 +88,7 @@ public class MainFrame extends JFrame
     @Override
     public void onStartGame(String player1Name, String player2Name, String difficultyKey) {
         controller.startNewGame(difficultyKey);
+        controller.registerQuestionPresenter(q -> QuestionDialog.showQuestionDialog(this, q));
 
         if (gamePanel != null) {
             cardPanel.remove(gamePanel);
@@ -107,6 +108,7 @@ public class MainFrame extends JFrame
         cardPanel.add(gamePanel, "GAME");
         cardLayout.show(cardPanel, "GAME");
     }
+
 
     /**
      * Callback from StartPanel when the user presses the BACK button.
