@@ -90,7 +90,7 @@ public class GamePanel extends JPanel {
         // =========================
         // CENTER: two player panels
         // =========================
-        centerPanel = new JPanel(new GridLayout(1, 2, 40, 0));
+        centerPanel = new JPanel(new GridLayout(1, 2, 18, 0));
         centerPanel.setOpaque(false);
         bg.add(centerPanel, BorderLayout.CENTER);
 
@@ -515,7 +515,7 @@ public class GamePanel extends JPanel {
         }
 
         // leave a little margin inside the wrapper so it doesn't touch
-        int margin = 20;
+        int margin = 6;
         int usableW = Math.max(1, availW - margin);
         int usableH = Math.max(1, availH - margin);
 
@@ -526,7 +526,7 @@ public class GamePanel extends JPanel {
 
         // clamp to keep it pretty (optional)
         int minCell = 18;
-        int maxCell = diff.equals("EASY") ? 48 : (diff.equals("MEDIUM") ? 35 : 28);
+        int maxCell = diff.equals("EASY") ? 60 : (diff.equals("MEDIUM") ? 44 : 34);
         cell = Math.max(minCell, Math.min(maxCell, cell));
 
         boardPanel1.setCellSize(cell);
