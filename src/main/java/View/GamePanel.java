@@ -354,8 +354,27 @@ public class GamePanel extends JPanel {
 
         String outcomeMessage = controller.getAndClearLastActionMessage();
         if (outcomeMessage != null) {
-            displayOutcomePopup(outcomeMessage);
+
+            int currentBoard = controller.getCurrentPlayerTurn(); // the one who activated
+            BoardPanel target = (currentBoard == 1) ? boardPanel1 : boardPanel2;
+            Color neon = (currentBoard == 1) ? new Color(255, 60, 60) : new Color(80, 180, 255);
+
+            String msgLower = outcomeMessage.toLowerCase();
+
+            // IMPORTANT: match your exact wording from the Model messages
+            if (msgLower.contains("3x3")) {
+                // queue 3x3 effect
+                target.queueEffect(/* BoardPanel.EffectType */ BoardPanel.EffectType.REVEAL_3X3); // see note below
+                showToast("3×3 REVEAL!", neon);
+            } else if (msgLower.contains("reveal 1 mine") || msgLower.contains("reveal one mine")) {
+                target.queueEffect(/* BoardPanel.EffectType */ BoardPanel.EffectType.REVEAL_1_MINE);
+                showToast("MINE REVEALED!", neon);
+            } else {
+                // keep a toast for normal outcomes too (optional)
+                showToast(outcomeMessage, neon);
+            }
         }
+
 
         if (controller.isGameOver()) {
             handleGameOverUI();
