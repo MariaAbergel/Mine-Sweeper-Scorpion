@@ -4,18 +4,14 @@ import Model.Question;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.util.ArrayList;
 import java.util.List;
+import Model.QuestionResult;
 
 public class QuestionDialog extends JDialog {
-
-    private boolean correct = false;
-    private String selectedAnswerText = null;
-    private String correctAnswerText = null;
-
-    private JPanel resultOverlay;   // glass overlay panel
-    private JLabel resultTitle;
-    private JLabel resultDetails;
+    private QuestionResult result = QuestionResult.SKIPPED;
 
     private static final Color BG_TOP = new Color(6, 10, 28);
     private static final Color BG_BOTTOM = new Color(10, 18, 55);
@@ -31,6 +27,14 @@ public class QuestionDialog extends JDialog {
         super(owner, "Question", ModalityType.APPLICATION_MODAL);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
 
+        // If user clicks X, treat as SKIPPED (do not mark wrong)
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                result = QuestionResult.SKIPPED;
+            }
+        });
+
         BackgroundPanel root = new BackgroundPanel();
         root.setLayout(new GridBagLayout());
         root.setBorder(BorderFactory.createEmptyBorder(18, 18, 18, 18));
@@ -42,8 +46,7 @@ public class QuestionDialog extends JDialog {
         QuestionCard questionCard = new QuestionCard(question.getText());
         questionCard.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        JPanel grid = new JPanel(new GridLayout(2, 2, 14, 12));
-        JPanel grid = new JPanel(new GridBagLayout());
+        JPanel grid = new JPanel(new GridLayout(2, 2, 18, 14));
         grid.setOpaque(false);
         grid.setBorder(BorderFactory.createEmptyBorder(18, 0, 0, 0));
 
@@ -52,27 +55,13 @@ public class QuestionDialog extends JDialog {
         char[] letters = new char[]{'A', 'B', 'C', 'D'};
 
         OptionButton[] buttons = new OptionButton[4];
-
-        // ====== UPDATED: 2x2 GridBagConstraints placement ======
-        GridBagConstraints gc = new GridBagConstraints();
-        gc.fill = GridBagConstraints.HORIZONTAL;
-        gc.weightx = 1.0;
-
         for (int i = 0; i < 4; i++) {
             String txt = (i < opts.size()) ? opts.get(i) : "";
             OptionButton ob = new OptionButton(letters[i], txt);
             group.add(ob);
             buttons[i] = ob;
-
-            gc.gridx = i % 2;   // 0,1
-            gc.gridy = i / 2;   // 0,0,1,1
-
-            // bottom gap only for first row; right gap only for left column
-            gc.insets = new Insets(0, 0, (gc.gridy == 0 ? 14 : 0), (gc.gridx == 0 ? 18 : 0));
-
-            grid.add(ob, gc);
+            grid.add(ob);
         }
-        // =======================================================
 
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         actions.setOpaque(false);
@@ -84,9 +73,10 @@ public class QuestionDialog extends JDialog {
         styleActionButton(submit, true);
 
         cancel.addActionListener(e -> {
-            correct = false;
+            result = QuestionResult.SKIPPED;
             dispose();
         });
+
 
         submit.addActionListener(e -> {
             if (group.getSelection() == null) {
@@ -97,17 +87,8 @@ public class QuestionDialog extends JDialog {
             char selectedChar = normalize(group.getSelection().getActionCommand().charAt(0));
             char correctChar = normalize(question.getCorrectOption());
 
-            // store texts for result message
-            int selIndex = selectedChar - 'A';
-            int corIndex = correctChar - 'A';
-
-            selectedAnswerText = (selIndex >= 0 && selIndex < opts.size()) ? opts.get(selIndex) : String.valueOf(selectedChar);
-            correctAnswerText  = (corIndex >= 0 && corIndex < opts.size()) ? opts.get(corIndex) : String.valueOf(correctChar);
-
-            correct = (selectedChar == correctChar);
-
-            // show result overlay centered
-            showResult(correct);
+            result = (selectedChar == correctChar) ? QuestionResult.CORRECT : QuestionResult.WRONG;
+            dispose();
         });
 
 
@@ -122,7 +103,6 @@ public class QuestionDialog extends JDialog {
         setContentPane(root);
         buildResultOverlay();
 
-        // RTL only for Hebrew content
         applyRtlIfHebrew(question.getText(), buttons);
         pack(); // let it compute preferred sizes FIRST
 
@@ -130,17 +110,20 @@ public class QuestionDialog extends JDialog {
         setSize(new Dimension(820, 520));          // final size
         setResizable(false);                       // keep fixed (or true if you want)
 
-        pack();                 // let layout compute correct height
+        // Bigger dialog
+        root.setPreferredSize(new Dimension(900, 560));
+        pack();
         setResizable(false);
         setLocationRelativeTo(owner);
 
     }
 
-    public static boolean showQuestionDialog(Window owner, Question question) {
+    public static QuestionResult showQuestionDialog(Window owner, Question question) {
         QuestionDialog dlg = new QuestionDialog(owner, question);
         dlg.setVisible(true);
-        return dlg.correct;
+        return dlg.result;
     }
+
 
     private static void styleActionButton(JButton b, boolean primary) {
         b.setFocusPainted(false);
@@ -152,6 +135,7 @@ public class QuestionDialog extends JDialog {
                 BorderFactory.createEmptyBorder(8, 14, 8, 14)
         ));
         b.setBackground(primary ? new Color(15, 40, 80) : new Color(20, 30, 60));
+        b.setOpaque(true);
     }
 
     private static void applyRtlIfHebrew(String text, OptionButton[] buttons) {
@@ -168,7 +152,7 @@ public class QuestionDialog extends JDialog {
         return ch;
     }
 
-    static List<String> wrap(String text, FontMetrics fm, int maxWidth) {
+    private static List<String> wrap(String text, FontMetrics fm, int maxWidth) {
         List<String> lines = new ArrayList<>();
         if (text == null) return lines;
 
@@ -262,10 +246,6 @@ public class QuestionDialog extends JDialog {
         private final String text;
         private boolean rtl = false;
 
-        // ===== UPDATED: dynamic height based on content =====
-        private static final int BTN_W = 250;
-        private static final int MIN_H = 70;
-
         OptionButton(char letter, String text) {
             this.letter = letter;
             this.text = text == null ? "" : text;
@@ -277,45 +257,16 @@ public class QuestionDialog extends JDialog {
             setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
             setActionCommand(String.valueOf(letter));
 
-            setPreferredSize(new Dimension(300, 92));
+            setPreferredSize(new Dimension(320, 110));
             setFont(new Font("Arial", Font.BOLD, 14));
             setForeground(TEXT_MUTED);
-
-            // start size and then expand if needed
-            setPreferredSize(new Dimension(BTN_W, MIN_H));
-            setMinimumSize(new Dimension(BTN_W, MIN_H));
-            updatePreferredHeight();
 
             addChangeListener(e -> repaint());
         }
 
         void applyRightToLeft() {
             rtl = true;
-            repaint();
         }
-
-        private void updatePreferredHeight() {
-            FontMetrics fm = getFontMetrics(getFont());
-
-            int circleR = 40;
-            int padding = 22;
-            int gap = 14;
-
-            // text width (same logic as paint)
-            int textW = BTN_W - padding - gap - circleR - padding;
-
-            List<String> lines = QuestionDialog.wrap(text, fm, textW);
-
-            int lineHeight = fm.getHeight();
-            int textBlockH = lines.size() * lineHeight;
-
-            // +padding, keep at least circle height
-            int needed = Math.max(MIN_H, textBlockH + 28);
-
-            setPreferredSize(new Dimension(BTN_W, needed));
-            setMinimumSize(new Dimension(BTN_W, needed));
-        }
-        // ====================================================
 
         @Override
         protected void paintComponent(Graphics g) {
@@ -333,12 +284,8 @@ public class QuestionDialog extends JDialog {
             g2.setColor(isSelected() ? OPTION_BORDER_SELECTED : OPTION_BORDER);
             g2.drawRoundRect(2, 2, w - 4, h - 4, arc, arc);
 
-            // English (default): circle on RIGHT
-            // Hebrew (rtl): circle on LEFT
-            boolean english = !rtl;
-
             int circleR = 40;
-            int circleX = english ? (w - 18 - circleR) : 18;
+            int circleX = rtl ? 18 : (w - 18 - circleR);
             int circleY = (h - circleR) / 2;
 
             g2.setColor(new Color(255, 255, 255, 230));
@@ -354,8 +301,8 @@ public class QuestionDialog extends JDialog {
             int padding = 22;
             int gap = 14;
 
-            int textX = english ? padding : (circleX + circleR + gap);
-            int textW = english ? (w - padding - gap - circleR - padding) : (w - textX - padding);
+            int textX = rtl ? (circleX + circleR + gap) : padding;
+            int textW = rtl ? (w - textX - padding) : (w - padding - gap - circleR - padding);
 
             Rectangle textRect = new Rectangle(textX, 0, textW, h);
             drawWrappedLeft(g2, text, textRect);
@@ -386,8 +333,8 @@ public class QuestionDialog extends JDialog {
 
             int lineHeight = fm.getHeight();
             int totalHeight = lines.size() * lineHeight;
-
             int y = (r.height - totalHeight) / 2 + fm.getAscent();
+
             for (String line : lines) {
                 g2.drawString(line, r.x, y);
                 y += lineHeight;
