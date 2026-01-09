@@ -1,6 +1,8 @@
 package View;
 
 import Controller.GameController;
+import Model.GameObserver;
+import Model.GameStateData;
 import Model.GameState;
 
 import javax.swing.*;
@@ -12,8 +14,9 @@ import java.util.ArrayList;
 /**
  * Main in-game panel: displays two boards, player info, score, lives and controls.
  * Communicates only with GameController (no direct access to the Model layer).
+ * Implements GameObserver to automatically update UI when game state changes.
  */
-public class GamePanel extends JPanel {
+public class GamePanel extends JPanel implements GameObserver {
 
     private final GameController controller;
 
@@ -58,6 +61,9 @@ public class GamePanel extends JPanel {
         // Register the question presenter so QUESTION cells will show a popup.
         controller.registerQuestionPresenter(question ->
                 QuestionDialog.showQuestionDialog(SwingUtilities.getWindowAncestor(this), question));
+
+        // Register this panel as an observer to receive state change notifications
+        controller.registerObserver(this);
 
         initComponents();
         updateStatus();
@@ -406,17 +412,35 @@ public class GamePanel extends JPanel {
 
 
     /**
-     * Updates score, lives, mines-left labels and heart colors.
+     * Updates lives, mines-left labels and heart colors.
+     * Note: Score is updated automatically via Observer pattern (update method).
      */
     public void updateStatus() {
         lblMinesLeft1.setText("MINES LEFT: " + controller.getMinesLeft(1));
         lblMinesLeft2.setText("MINES LEFT: " + controller.getMinesLeft(2));
-        lblScore.setText("SCORE: " + controller.getSharedScore());
+        // Score is updated automatically via Observer pattern - no manual update needed
         lblLives.setText("LIVES: " + controller.getSharedLives() + "/" +
                 controller.getMaxLives());
         updateHearts();
         revalidate();
         repaint();
+    }
+
+    /**
+     * Observer pattern: called automatically when game state (score/level) changes.
+     * Updates the score label with the new score from the state.
+     * @param state the updated game state containing score and level
+     */
+    @Override
+    public void update(GameStateData state) {
+        // Update score label on the Event Dispatch Thread
+        SwingUtilities.invokeLater(() -> {
+            if (lblScore != null) {
+                lblScore.setText("SCORE: " + state.getScore());
+                revalidate();
+                repaint();
+            }
+        });
     }
 
     /**
