@@ -38,7 +38,7 @@ public class QuestionActivator extends SpecialCellActivator {
         ScoreRules.Result r = game.processQuestionAnswer(level, isCorrect);
 
         String base =
-                (isCorrect ? "✅ Correct!\n" : "❌ Wrong!\n") +
+                (isCorrect ? " Correct!\n" : " Wrong!\n") +
                         r.details;
 
         return new ActivationResult(true, isCorrect, base);

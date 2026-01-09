@@ -90,9 +90,14 @@ public class QuestionDialog extends JDialog {
         setContentPane(root);
 
         applyRtlIfHebrew(question.getText(), buttons);
-        setSize(680, 420);
+        // Make it bigger
+        root.setPreferredSize(new Dimension(900, 560));  // pick what you like (e.g. 900x560)
+        setContentPane(root);
 
-        pack();
+        pack();                  // pack to preferred sizes
+        setResizable(false);
+        setLocationRelativeTo(owner);
+
         setResizable(false);
         setLocationRelativeTo(owner);
     }
@@ -233,7 +238,7 @@ public class QuestionDialog extends JDialog {
             setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
             setActionCommand(String.valueOf(letter));
 
-            setPreferredSize(new Dimension(250, 70));
+            setPreferredSize(new Dimension(320, 110));   // wider + taller
             setFont(new Font("Arial", Font.BOLD, 14));
             setForeground(TEXT_MUTED);
 
@@ -297,7 +302,7 @@ public class QuestionDialog extends JDialog {
             FontMetrics fm = g2.getFontMetrics();
             List<String> lines = QuestionDialog.wrap(text, fm, r.width);
 
-            int maxLines = 2;
+            int maxLines = 4;
             if (lines.size() > maxLines) {
                 lines = new ArrayList<>(lines.subList(0, maxLines));
                 String last = lines.get(maxLines - 1);

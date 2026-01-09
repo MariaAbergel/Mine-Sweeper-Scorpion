@@ -428,11 +428,19 @@ public class GamePanel extends JPanel {
      * Displays the result of the Surprise tile.
      */
     private void displayOutcomePopup(String message) {
-        JOptionPane.showMessageDialog(this,
-                message,
-                "Message",
-                JOptionPane.INFORMATION_MESSAGE);
+        Window w = SwingUtilities.getWindowAncestor(this);
+
+        if (message != null && message.toLowerCase().contains("correct")) {
+            OutcomeDialog.showCorrect(w, message);
+        } else if (message != null && message.toLowerCase().contains("wrong")) {
+            OutcomeDialog.showWrong(w, message);
+        } else {
+            OutcomeDialog.show(w, "Message", message);
+        }
     }
+
+
+
 
     /**
      * Show "WAIT FOR YOUR TURN" on the board that is not active.
