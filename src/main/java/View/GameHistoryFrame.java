@@ -8,6 +8,7 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
+import javax.swing.table.TableRowSorter;
 import java.awt.*;
 import java.net.URL;
 import java.util.List;
@@ -76,6 +77,36 @@ public class GameHistoryFrame extends JFrame {
 
         JTable gamesTable = createStyledTable(gamesModel);
         JTable playersTable = createStyledTable(playersModel);
+        gamesTable.setAutoCreateRowSorter(true);
+        TableRowSorter<DefaultTableModel> sorter =
+                (TableRowSorter<DefaultTableModel>) gamesTable.getRowSorter();
+
+// Date / Time column index = 1  ("dd/MM/yy HH:mm")
+        sorter.setComparator(1, (a, b) -> {
+            try {
+                java.time.format.DateTimeFormatter fmt = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yy HH:mm");
+                java.time.LocalDateTime da = java.time.LocalDateTime.parse(a.toString(), fmt);
+                java.time.LocalDateTime db = java.time.LocalDateTime.parse(b.toString(), fmt);
+                return da.compareTo(db);
+            } catch (Exception e) {
+                return a.toString().compareTo(b.toString());
+            }
+        });
+
+// Duration column index = 7 ("mm:ss")
+        sorter.setComparator(7, (a, b) -> {
+            try {
+                String[] pa = a.toString().split(":");
+                String[] pb = b.toString().split(":");
+                int sa = Integer.parseInt(pa[0]) * 60 + Integer.parseInt(pa[1]);
+                int sb = Integer.parseInt(pb[0]) * 60 + Integer.parseInt(pb[1]);
+                return Integer.compare(sa, sb);
+            } catch (Exception e) {
+                return a.toString().compareTo(b.toString());
+            }
+        });
+
+        playersTable.setAutoCreateRowSorter(true);
 
         // ====== FILTER / SEARCH BAR (Top) ======
 
