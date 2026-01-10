@@ -56,9 +56,21 @@ public class GamePanel extends JPanel {
         this.startTimeMillis = System.currentTimeMillis();
 
 
-        // Register the question presenter so QUESTION cells will show a popup.
-        controller.registerQuestionPresenter(question ->
-                QuestionDialog.showQuestionDialog(SwingUtilities.getWindowAncestor(this), question));
+        controller.registerQuestionPresenter(q -> {
+            GameController.QuestionDTO dto = controller.buildQuestionDTO(q);
+
+            GameController.QuestionAnswerResult ans =
+                    QuestionDialog.showQuestionDialog(SwingUtilities.getWindowAncestor(this), dto);
+
+            // Convert back to Model.QuestionResult (because the Model expects it)
+            return switch (ans) {
+                case CORRECT -> Model.QuestionResult.CORRECT;
+                case WRONG   -> Model.QuestionResult.WRONG;
+                default      -> Model.QuestionResult.SKIPPED;
+            };
+        });
+
+
 
         initComponents();
         updateStatus();

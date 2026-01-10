@@ -1,7 +1,6 @@
 package View;
 
-import Model.Game;
-import Model.GameState;
+import Controller.GameController;
 
 import javax.swing.*;
 import java.awt.*;
@@ -22,11 +21,11 @@ public class GameResultDialog extends JDialog {
     private static final Color TEXT = Color.WHITE;
     private static final Color TEXT_MUTED = new Color(225, 230, 255);
 
-    private GameResultDialog(Window owner, Game game) {
+    private GameResultDialog(Window owner, GameController.GameSummaryDTO summary) {
         super(owner, "Game Result", ModalityType.APPLICATION_MODAL);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
 
-        boolean isWin = game.getGameState() == GameState.WON;
+        boolean isWin = summary.isWin;
         Color accent = isWin ? WIN_ACCENT : LOSE_ACCENT;
 
         BackgroundPanel root = new BackgroundPanel();
@@ -41,10 +40,10 @@ public class GameResultDialog extends JDialog {
         JPanel statsGrid = new JPanel(new GridLayout(4, 2, 10, 10));
         statsGrid.setOpaque(false);
 
-        addStat(statsGrid, "Shared Score", String.valueOf(game.getSharedScore()));
-        addStat(statsGrid, "Shared Lives", String.valueOf(game.getSharedLives()));
-        addStat(statsGrid, "Questions Answered", String.valueOf(game.getTotalQuestionsAnswered()));
-        addStat(statsGrid, "Correct Answers", String.valueOf(game.getTotalCorrectAnswers()));
+        addStat(statsGrid, "Shared Score", String.valueOf(summary.sharedScore));
+        addStat(statsGrid, "Shared Lives", String.valueOf(summary.sharedLives));
+        addStat(statsGrid, "Questions Answered", String.valueOf(summary.totalQuestions));
+        addStat(statsGrid, "Correct Answers", String.valueOf(summary.correctAnswers));
 
         NeonCard statsCard = new NeonCard(accent);
         statsCard.setLayout(new BorderLayout());
@@ -94,8 +93,8 @@ public class GameResultDialog extends JDialog {
 
     public ResultAction getAction() { return action; }
 
-    public static ResultAction showResultDialog(Window owner, Game game) {
-        GameResultDialog dlg = new GameResultDialog(owner, game);
+    public static ResultAction showResultDialog(Window owner, GameController.GameSummaryDTO summary) {
+        GameResultDialog dlg = new GameResultDialog(owner, summary);
         dlg.setVisible(true);
         return dlg.getAction();
     }
