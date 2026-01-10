@@ -115,9 +115,8 @@ public class QuestionDialog extends JDialog {
 
             boolean isCorrect = (selectedChar == correctChar);
             result = isCorrect ? QuestionResult.CORRECT : QuestionResult.WRONG;
-            
-            // Show result overlay instead of closing immediately
-            showResult(isCorrect);
+            dispose();
+
         });
 
 
@@ -145,6 +144,69 @@ public class QuestionDialog extends JDialog {
         setResizable(false);
         setLocationRelativeTo(owner);
 
+    }
+    private void showResult(boolean isCorrect) {
+        // create overlay once
+        if (resultOverlay == null) {
+            resultOverlay = new JPanel(new GridBagLayout());
+            resultOverlay.setOpaque(true);
+            resultOverlay.setBackground(new Color(0, 0, 0, 170)); // dark glass
+
+            // result card
+            JPanel card = new JPanel();
+            card.setOpaque(true);
+            card.setBackground(new Color(10, 18, 55));
+            card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+
+            // border depends on correct/wrong
+            Color accent = isCorrect ? new Color(80, 255, 120) : new Color(255, 90, 90);
+            card.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(accent, 3, true),
+                    BorderFactory.createEmptyBorder(18, 22, 18, 22)
+            ));
+
+            resultTitle = new JLabel("", SwingConstants.CENTER);
+            resultTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
+            resultTitle.setFont(new Font("Arial", Font.BOLD, 22));
+            resultTitle.setForeground(Color.WHITE);
+
+            resultDetails = new JLabel("", SwingConstants.CENTER);
+            resultDetails.setAlignmentX(Component.CENTER_ALIGNMENT);
+            resultDetails.setFont(new Font("Arial", Font.PLAIN, 14));
+            resultDetails.setForeground(new Color(225, 230, 255));
+
+            JButton ok = new JButton("OK");
+            styleActionButton(ok, true);
+            ok.setAlignmentX(Component.CENTER_ALIGNMENT);
+            ok.addActionListener(e -> dispose());
+
+            card.add(resultTitle);
+            card.add(Box.createVerticalStrut(10));
+            card.add(resultDetails);
+            card.add(Box.createVerticalStrut(16));
+            card.add(ok);
+
+            resultOverlay.add(card);
+            setGlassPane(resultOverlay);
+        }
+
+        // update text every time
+        resultTitle.setText(isCorrect ? "CORRECT " : "WRONG ");
+
+        String picked = (selectedAnswerText == null) ? "-" : selectedAnswerText;
+        String correct = (correctAnswerText == null) ? "-" : correctAnswerText;
+
+        resultDetails.setText("<html><div style='text-align:center;'>"
+                + "<b>Your answer:</b> " + escapeHtml(picked) + "<br>"
+                + "<b>Correct answer:</b> " + escapeHtml(correct)
+                + "</div></html>");
+
+        resultOverlay.setVisible(true);
+    }
+
+    private static String escapeHtml(String s) {
+        if (s == null) return "";
+        return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
     }
 
     public static QuestionResult showQuestionDialog(Window owner, Question question) {

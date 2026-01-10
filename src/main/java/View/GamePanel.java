@@ -693,50 +693,5 @@ public class GamePanel extends JPanel {
         resizeStabilizer.start();
     }
 
-    private void showToast(String message, Color color) {
-        // Simple toast implementation using a JWindow or similar
-        // For now, we can just print to console or use a temporary JLabel
-        // Ideally, you would create a custom Toast component
-        System.out.println("TOAST: " + message);
-        
-        // Example: Show a temporary popup label on the glass pane
-        JRootPane root = SwingUtilities.getRootPane(this);
-        if (root != null) {
-            JLabel toastLabel = new JLabel(message);
-            toastLabel.setOpaque(true);
-            toastLabel.setBackground(new Color(0, 0, 0, 180));
-            toastLabel.setForeground(color);
-            toastLabel.setFont(new Font("Arial", Font.BOLD, 24));
-            toastLabel.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
-            toastLabel.setHorizontalAlignment(SwingConstants.CENTER);
-            
-            // Position it
-            Component glass = root.getGlassPane();
-            if (glass instanceof JPanel) {
-                JPanel glassPanel = (JPanel) glass;
-                glassPanel.setLayout(null);
-                glassPanel.setVisible(true);
-                
-                toastLabel.setBounds(
-                    (glassPanel.getWidth() - 300) / 2,
-                    glassPanel.getHeight() / 2 - 50,
-                    300, 60
-                );
-                
-                glassPanel.add(toastLabel);
-                glassPanel.revalidate();
-                glassPanel.repaint();
-                
-                // Remove after 2 seconds
-                Timer t = new Timer(2000, e -> {
-                    glassPanel.remove(toastLabel);
-                    glassPanel.revalidate();
-                    glassPanel.repaint();
-                    glassPanel.setVisible(false);
-                });
-                t.setRepeats(false);
-                t.start();
-            }
-        }
-    }
+
 }
