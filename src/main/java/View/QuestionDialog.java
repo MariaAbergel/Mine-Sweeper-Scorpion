@@ -1,6 +1,7 @@
 package View;
 
 import Model.Question;
+import Model.QuestionResult;
 
 import javax.swing.*;
 import java.awt.*;
@@ -8,7 +9,6 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.util.ArrayList;
 import java.util.List;
-import Model.QuestionResult;
 
 public class QuestionDialog extends JDialog {
     private QuestionResult result = QuestionResult.SKIPPED;
@@ -23,6 +23,12 @@ public class QuestionDialog extends JDialog {
     private static final Color TEXT = Color.WHITE;
     private static final Color TEXT_MUTED = new Color(225, 230, 255);
 
+    // Fields for result overlay
+    private JPanel resultOverlay;
+    private JLabel resultTitle;
+    private JLabel resultDetails;
+    private String selectedAnswerText;
+    private String correctAnswerText;
 
     private QuestionDialog(Window owner, Question question) {
         super(owner, "Question", ModalityType.APPLICATION_MODAL);
@@ -90,18 +96,28 @@ public class QuestionDialog extends JDialog {
                 return;
             }
 
-            // selected letter A/B/C/D
-            char selected = sel.getActionCommand().charAt(0);
+            // Get selected answer text
+            for (OptionButton btn : buttons) {
+                if (btn.isSelected()) {
+                    selectedAnswerText = btn.text;
+                    break;
+                }
+            }
 
-            // correct letter A/B/C/D from the Question model
-            char correct = question.getCorrectOption();
+            // Get correct answer text
+            int correctIndex = normalize(question.getCorrectOption()) - 'A';
+            if (correctIndex >= 0 && correctIndex < opts.size()) {
+                correctAnswerText = opts.get(correctIndex);
+            }
 
-            selected = Character.toUpperCase(selected);
-            correct  = Character.toUpperCase(correct);
+            char selectedChar = normalize(group.getSelection().getActionCommand().charAt(0));
+            char correctChar = normalize(question.getCorrectOption());
 
-            result = (selected == correct) ? QuestionResult.CORRECT : QuestionResult.WRONG;
-
-            dispose();
+            boolean isCorrect = (selectedChar == correctChar);
+            result = isCorrect ? QuestionResult.CORRECT : QuestionResult.WRONG;
+            
+            // Show result overlay instead of closing immediately
+            showResult(isCorrect);
         });
 
 
