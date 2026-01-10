@@ -11,6 +11,7 @@ import java.net.URL;
  * Manages navigation between:
  * - MainMenuPanel (home screen)
  * - StartPanel    (enter players + difficulty)
+ * - HowToPlayPanel (game instructions)
  * - GamePanel     (actual game)
  *
  * Communicates with the Model layer only through GameController (MVC).
@@ -25,6 +26,7 @@ public class MainFrame extends JFrame
 
     private MainMenuPanel mainMenuPanel;
     private StartPanel startPanel;
+    private HowToPlayPanel howToPlayPanel;
     private GamePanel gamePanel;   // created when starting a game
 
     // Styling constants
@@ -61,9 +63,11 @@ public class MainFrame extends JFrame
         // ===== create screens (cards) =====
         mainMenuPanel = new MainMenuPanel(this);   // first screen with 4 buttons
         startPanel    = new StartPanel(this);      // existing screen
+        howToPlayPanel = new HowToPlayPanel(this::onBackToMenu); // How to play panel
 
         cardPanel.add(mainMenuPanel, "MENU");
         cardPanel.add(startPanel,    "START");
+        cardPanel.add(howToPlayPanel, "HOWTOPLAY");
         // "GAME" card will be added later when game starts
 
         setContentPane(cardPanel);
@@ -142,7 +146,7 @@ public class MainFrame extends JFrame
     /** User pressed "HOW TO PLAY" on the main menu. */
     @Override
     public void onHowToPlayClicked() {
-        showHowToPlayDialog();
+        cardLayout.show(cardPanel, "HOWTOPLAY");
     }
 
     /** User pressed "QUESTION MANAGEMENT (ADMIN)" on the main menu. */
@@ -178,38 +182,8 @@ public class MainFrame extends JFrame
     }
 
     // =================================================================
-    //  Helpers: How to play + Admin access
+    //  Helpers: Admin access
     // =================================================================
-
-    private void showHowToPlayDialog() {
-        String msg =
-                "HOW TO PLAY\n\n" +
-                        "Two players, each has a board.\n" +
-                        "You share lives and score.\n\n" +
-                        "Your turn:\n" +
-                        "Left click = reveal a cell.\n" +
-                        "Right click = flag a cell you think is a mine.\n" +
-                        "• After your move, the turn switches.\n\n" +
-                        "Cell types:\n" +
-                        "Mine – losing a life if revealed.\n" +
-                        "Number – tells how many mines around.\n" +
-                        "Question (Q) – " +
-                        "after reveal, you can pay points and answer a quiz\n" +
-                        "(correct gives bonus, wrong can hurt).\n" +
-                        "Surprise (S) – after reveal, you can pay points for random good/bad effect.\n\n" +
-                        "Win / Lose:\n" +
-                        "Win = all safe cells cleared.\n" +
-                        "Lose = shared lives reach 0.\n" +
-                        "Remaining lives turn into extra score at the end.\n";
-
-        JOptionPane.showMessageDialog(
-                this,
-                msg,
-                "How to Play",
-                JOptionPane.INFORMATION_MESSAGE
-        );
-    }
-
 
     /**
      * Simple admin gate for Question Management.
