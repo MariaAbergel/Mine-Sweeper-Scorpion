@@ -16,10 +16,15 @@ import java.util.List;
 /**
  * "Games History" + "Players History" screen.
  * Uses the specific "Scorpion Minesweeper" background image from resources.
+ *
+ * MVC note:
+ * This frame does NOT navigate by itself. It uses a callback (Runnable) that is provided
+ * by whoever opened it (MainFrame), so we don't couple View->View.
  */
 public class GameHistoryFrame extends JFrame {
 
     private final GameController controller;
+    private final Runnable onExitToMenu;   // ✅ callback to main menu
 
     // Models
     private final DefaultTableModel gamesModel;
@@ -43,9 +48,11 @@ public class GameHistoryFrame extends JFrame {
     private static final Color TABLE_SELECTION_BG = new Color(60, 60, 80, 200);
     private static final Color HEADER_HOVER_BG = new Color(45, 45, 45, 255);
 
-    public GameHistoryFrame(GameController controller) {
+    public GameHistoryFrame(GameController controller, Runnable onExitToMenu) {
         super("Game & Players History");
         this.controller = controller;
+        this.onExitToMenu = onExitToMenu;
+
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
 
         // Set window icon (optional)
@@ -144,9 +151,6 @@ public class GameHistoryFrame extends JFrame {
 
 
         // ====== FILTER / SEARCH BAR (Top) ======
-
-        // --- FIX STARTS HERE ---
-        // We override paintComponent and setOpaque(false) to handle the semi-transparent black background correctly.
         JPanel filterPanel = new JPanel(new BorderLayout()) {
             @Override
             protected void paintComponent(Graphics g) {
@@ -156,8 +160,19 @@ public class GameHistoryFrame extends JFrame {
             }
         };
         filterPanel.setBackground(new Color(0, 0, 0, 200)); // Semi-transparent black
-        filterPanel.setOpaque(false); // <--- CRITICAL FIX: Tells Swing to paint what's behind it first
+        filterPanel.setOpaque(false);
         filterPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        // ✅ Exit / Back button (LEFT)
+        JButton btnBack = createStyledButton("Back to Menu");
+        btnBack.addActionListener(e -> {
+            dispose();
+            if (onExitToMenu != null) onExitToMenu.run();
+        });
+
+        JPanel backPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        backPanel.setOpaque(false);
+        backPanel.add(btnBack);
         filterPanel.setPreferredSize(new Dimension(1000, 70));
         filterPanel.setMinimumSize(new Dimension(1000, 70));
 
@@ -209,7 +224,13 @@ public class GameHistoryFrame extends JFrame {
         searchPanel.add(searchField, BorderLayout.CENTER);
         searchPanel.add(styledSearchButton, BorderLayout.EAST);
 
-        filterPanel.add(leftFilters, BorderLayout.WEST);
+        // Compose left side: back button + filters
+        JPanel leftGroup = new JPanel(new FlowLayout(FlowLayout.LEFT, 18, 5));
+        leftGroup.setOpaque(false);
+        leftGroup.add(backPanel);
+        leftGroup.add(leftFilters);
+
+        filterPanel.add(leftGroup, BorderLayout.WEST);
         filterPanel.add(searchPanel, BorderLayout.EAST);
 
         // Events
@@ -407,7 +428,6 @@ public class GameHistoryFrame extends JFrame {
         private Image backgroundImage;
 
         public BackgroundPanel(String resourcePath) {
-            // Load from resources (classpath)
             URL url = getClass().getResource(resourcePath);
             if (url != null) {
                 backgroundImage = new ImageIcon(url).getImage();
@@ -424,8 +444,6 @@ public class GameHistoryFrame extends JFrame {
             } else {
                 g.setColor(Color.BLACK);
                 g.fillRect(0, 0, getWidth(), getHeight());
-
-                // Debug text
                 g.setColor(Color.RED);
                 g.drawString("Background not found", 10, 20);
             }
