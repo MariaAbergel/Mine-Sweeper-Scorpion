@@ -195,7 +195,7 @@ public class QuestionManagementFrame extends JFrame {
             model.addRow(new Object[]{
                     q.getId(), q.getText(),
                     opts.get(0), opts.get(1), opts.get(2), opts.get(3),
-                    String.valueOf(convertCorrectOptionToInt(q.getCorrectOption())),
+                    String.valueOf(charToNumber(q.getCorrectOption())),
                     q.getDifficultyLevel()
             });
         }
@@ -241,7 +241,7 @@ public class QuestionManagementFrame extends JFrame {
         String c = model.getValueAt(row, 4).toString();
         String d = model.getValueAt(row, 5).toString();
         String correctStr = model.getValueAt(row, 6).toString();
-        char correct = convertIntToCorrectOption(Integer.parseInt(correctStr));
+        char correct = numberToChar(Integer.parseInt(correctStr));
         String diff = model.getValueAt(row, 7).toString();
         List<String> opts = new ArrayList<>();
         opts.add(a); opts.add(b); opts.add(c); opts.add(d);
@@ -335,4 +335,98 @@ public class QuestionManagementFrame extends JFrame {
             default: return 1; // fallback
         }
     }
+
+    // =======================
+//   FILTER UI + LOGIC
+// =======================
+
+    private JPanel createFilterPanel() {
+        JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 6));
+        p.setOpaque(false);
+
+        JLabel diffLbl = new JLabel("Difficulty:");
+        diffLbl.setForeground(TEXT_COLOR);
+
+        difficultyFilter = new JComboBox<>(new String[]{"All", "EASY", "MEDIUM", "HARD", "EXPERT"});
+        styleCombo(difficultyFilter);
+
+        JLabel corrLbl = new JLabel("Correct:");
+        corrLbl.setForeground(TEXT_COLOR);
+
+        correctAnswerFilter = new JComboBox<>(new String[]{"All", "1", "2", "3", "4"});
+        styleCombo(correctAnswerFilter);
+
+        JLabel idLbl = new JLabel("ID:");
+        idLbl.setForeground(TEXT_COLOR);
+
+        idFilter = new JTextField(8);
+        idFilter.setFont(new Font("Arial", Font.PLAIN, 14));
+
+        JButton applyBtn = createStyledButton("Apply");
+        JButton clearBtn = createStyledButton("Clear");
+
+        applyBtn.addActionListener(e -> applyFilters());
+        clearBtn.addActionListener(e -> {
+            difficultyFilter.setSelectedIndex(0);
+            correctAnswerFilter.setSelectedIndex(0);
+            idFilter.setText("");
+            applyFilters();
+        });
+
+        // Apply on Enter in the ID field
+        idFilter.addActionListener(e -> applyFilters());
+
+        // Apply instantly on combo change
+        difficultyFilter.addActionListener(e -> applyFilters());
+        correctAnswerFilter.addActionListener(e -> applyFilters());
+
+        p.add(diffLbl);
+        p.add(difficultyFilter);
+        p.add(corrLbl);
+        p.add(correctAnswerFilter);
+        p.add(idLbl);
+        p.add(idFilter);
+        p.add(applyBtn);
+        p.add(clearBtn);
+
+        return p;
+    }
+
+    private void styleCombo(JComboBox<String> box) {
+        box.setBackground(Color.WHITE);
+        box.setForeground(Color.BLACK);
+        box.setFont(new Font("Arial", Font.PLAIN, 14));
+        box.setFocusable(false);
+    }
+
+    private void applyFilters() {
+        if (sorter == null) return;
+
+        String diff = (String) difficultyFilter.getSelectedItem();
+        String corr = (String) correctAnswerFilter.getSelectedItem();
+        String idText = (idFilter.getText() == null) ? "" : idFilter.getText().trim();
+
+        List<RowFilter<Object, Object>> filters = new ArrayList<>();
+
+        // Column indexes: 0 ID, 6 Correct, 7 Difficulty
+        if (diff != null && !"All".equalsIgnoreCase(diff)) {
+            filters.add(RowFilter.regexFilter("^" + java.util.regex.Pattern.quote(diff) + "$", 7));
+        }
+
+        if (corr != null && !"All".equalsIgnoreCase(corr)) {
+            filters.add(RowFilter.regexFilter("^" + java.util.regex.Pattern.quote(corr) + "$", 6));
+        }
+
+        if (!idText.isEmpty()) {
+            // allow partial id match
+            filters.add(RowFilter.regexFilter(java.util.regex.Pattern.quote(idText), 0));
+        }
+
+        if (filters.isEmpty()) {
+            sorter.setRowFilter(null);
+        } else {
+            sorter.setRowFilter(RowFilter.andFilter(filters));
+        }
+    }
+
 }
