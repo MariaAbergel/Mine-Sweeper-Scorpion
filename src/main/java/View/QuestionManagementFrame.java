@@ -258,7 +258,21 @@ public class QuestionManagementFrame extends JFrame {
         JTextField bField = new JTextField(existing == null ? "" : existing.getOptions().get(1));
         JTextField cField = new JTextField(existing == null ? "" : existing.getOptions().get(2));
         JTextField dField = new JTextField(existing == null ? "" : existing.getOptions().get(3));
-        JTextField correctField = new JTextField(existing == null ? "1" : String.valueOf(convertCorrectOptionToInt(existing.getCorrectOption())));
+        
+        // Create dropdown with values 1-4
+        Integer[] options = {1, 2, 3, 4};
+        JComboBox<Integer> correctComboBox = new JComboBox<>(options);
+        
+        // If editing existing question, convert char to number and preselect
+        if (existing != null) {
+            char correctChar = existing.getCorrectOption();
+            int selectedValue = charToNumber(correctChar);
+            correctComboBox.setSelectedItem(selectedValue);
+        } else {
+            // Default to 1 (A) for new questions
+            correctComboBox.setSelectedItem(1);
+        }
+        
         JTextField diffField = new JTextField(existing == null ? "EASY" : existing.getDifficultyLevel());
 
         JPanel panel = new JPanel(new GridLayout(0, 2, 6, 6));
@@ -268,7 +282,7 @@ public class QuestionManagementFrame extends JFrame {
         panel.add(new JLabel("Option B:")); panel.add(bField);
         panel.add(new JLabel("Option C:")); panel.add(cField);
         panel.add(new JLabel("Option D:")); panel.add(dField);
-        panel.add(new JLabel("Correct (1-4):")); panel.add(correctField);
+        panel.add(new JLabel("Correct Answer (1–4):")); panel.add(correctComboBox);
         panel.add(new JLabel("Difficulty (EASY/MEDIUM/HARD/EXPERT):")); panel.add(diffField);
 
         int res = JOptionPane.showConfirmDialog(this, panel,
@@ -284,8 +298,9 @@ public class QuestionManagementFrame extends JFrame {
             opts.add(bField.getText().trim());
             opts.add(cField.getText().trim());
             opts.add(dField.getText().trim());
-            int correctInt = Integer.parseInt(correctField.getText().trim());
-            char correct = convertIntToCorrectOption(correctInt);
+            // Convert selected number (1-4) to char ('A'-'D')
+            int selectedNumber = (Integer) correctComboBox.getSelectedItem();
+            char correct = numberToChar(selectedNumber);
             String diff = diffField.getText().trim();
             return new Question(id, text, opts, correct, diff);
         } catch (Exception ex) {
@@ -294,164 +309,30 @@ public class QuestionManagementFrame extends JFrame {
             return null;
         }
     }
-
-    // =======================
-    //   FILTER PANEL
-    // =======================
-
-    private JPanel createFilterPanel() {
-        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 10));
-        panel.setBackground(BG_COLOR);
-        panel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createTitledBorder(
-                        BorderFactory.createLineBorder(ACCENT_COLOR, 1),
-                        "Filters",
-                        0,
-                        0,
-                        new Font("Arial", Font.BOLD, 12),
-                        ACCENT_COLOR
-                ),
-                BorderFactory.createEmptyBorder(5, 10, 5, 10)
-        ));
-
-        // ID Filter
-        JLabel idLabel = new JLabel("ID:");
-        idLabel.setForeground(TEXT_COLOR);
-        idLabel.setFont(new Font("Arial", Font.PLAIN, 14));
-        idFilter = createStyledTextField();
-        idFilter.setPreferredSize(new Dimension(100, 25));
-        idFilter.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
-            public void changedUpdate(javax.swing.event.DocumentEvent e) { applyFilters(); }
-            public void removeUpdate(javax.swing.event.DocumentEvent e) { applyFilters(); }
-            public void insertUpdate(javax.swing.event.DocumentEvent e) { applyFilters(); }
-        });
-
-        // Correct Answer Filter
-        JLabel correctLabel = new JLabel("Correct Answer:");
-        correctLabel.setForeground(TEXT_COLOR);
-        correctLabel.setFont(new Font("Arial", Font.PLAIN, 14));
-        correctAnswerFilter = createStyledComboBox(new String[]{"ALL", "1", "2", "3", "4"});
-        correctAnswerFilter.addActionListener(e -> applyFilters());
-
-        // Difficulty Filter
-        JLabel diffLabel = new JLabel("Difficulty:");
-        diffLabel.setForeground(TEXT_COLOR);
-        diffLabel.setFont(new Font("Arial", Font.PLAIN, 14));
-        difficultyFilter = createStyledComboBox(new String[]{"ALL", "EASY", "MEDIUM", "HARD", "EXPERT"});
-        difficultyFilter.addActionListener(e -> applyFilters());
-
-        panel.add(idLabel);
-        panel.add(idFilter);
-        panel.add(correctLabel);
-        panel.add(correctAnswerFilter);
-        panel.add(diffLabel);
-        panel.add(difficultyFilter);
-
-        return panel;
-    }
-
-    private JTextField createStyledTextField() {
-        JTextField field = new JTextField();
-        field.setBackground(new Color(20, 20, 20));
-        field.setForeground(TEXT_COLOR);
-        field.setCaretColor(ACCENT_COLOR);
-        field.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ACCENT_COLOR, 1),
-                BorderFactory.createEmptyBorder(2, 5, 2, 5)
-        ));
-        field.setFont(new Font("Arial", Font.PLAIN, 14));
-        return field;
-    }
-
-    private JComboBox<String> createStyledComboBox(String[] items) {
-        JComboBox<String> combo = new JComboBox<>(items);
-        combo.setBackground(new Color(20, 20, 20));
-        combo.setForeground(TEXT_COLOR);
-        combo.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ACCENT_COLOR, 1),
-                BorderFactory.createEmptyBorder(2, 5, 2, 5)
-        ));
-        combo.setFont(new Font("Arial", Font.PLAIN, 14));
-        
-        // Style the combo box button
-        combo.setRenderer(new DefaultListCellRenderer() {
-            @Override
-            public Component getListCellRendererComponent(JList<?> list, Object value, int index,
-                    boolean isSelected, boolean cellHasFocus) {
-                Component c = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-                if (c instanceof JLabel) {
-                    JLabel label = (JLabel) c;
-                    label.setBackground(isSelected ? TABLE_SELECTION_BG : TABLE_ROW_BG);
-                    label.setForeground(TEXT_COLOR);
-                }
-                return c;
-            }
-        });
-
-        return combo;
-    }
-
-    private void applyFilters() {
-        List<RowFilter<Object, Object>> filters = new ArrayList<>();
-
-        // ID filter (partial match, numeric)
-        String idText = idFilter.getText().trim();
-        if (!idText.isEmpty()) {
-            try {
-                final String idFilterText = idText;
-                filters.add(RowFilter.regexFilter(idFilterText, 0)); // Column 0 is ID
-            } catch (java.util.regex.PatternSyntaxException e) {
-                // Invalid regex, ignore
-            }
-        }
-
-        // Correct Answer filter (numeric 1/2/3/4 matches table display)
-        String correctValue = (String) correctAnswerFilter.getSelectedItem();
-        if (correctValue != null && !"ALL".equals(correctValue)) {
-            filters.add(RowFilter.regexFilter("^" + correctValue + "$", 6)); // Column 6 is Correct
-        }
-
-        // Difficulty filter
-        String diffValue = (String) difficultyFilter.getSelectedItem();
-        if (diffValue != null && !"ALL".equals(diffValue)) {
-            filters.add(RowFilter.regexFilter("^" + diffValue + "$", 7)); // Column 7 is Difficulty
-        }
-
-        // Combine all filters with AND logic
-        if (!filters.isEmpty()) {
-            sorter.setRowFilter(RowFilter.andFilter(filters));
-        } else {
-            sorter.setRowFilter(null); // No filter
-        }
-    }
-
-    // =======================
-    //   HELPER METHODS
-    // =======================
-
+    
     /**
-     * Converts correct option from char ('A'/'B'/'C'/'D') to int (1/2/3/4) for display.
+     * Converts a number (1-4) to the corresponding char ('A'-'D').
      */
-    private int convertCorrectOptionToInt(char correctOption) {
-        return switch (Character.toUpperCase(correctOption)) {
-            case 'A' -> 1;
-            case 'B' -> 2;
-            case 'C' -> 3;
-            case 'D' -> 4;
-            default -> 1; // fallback
-        };
+    private char numberToChar(int number) {
+        switch (number) {
+            case 1: return 'A';
+            case 2: return 'B';
+            case 3: return 'C';
+            case 4: return 'D';
+            default: return 'A'; // fallback
+        }
     }
-
+    
     /**
-     * Converts correct option from int (1/2/3/4) to char ('A'/'B'/'C'/'D') for model storage.
+     * Converts a char ('A'-'D') to the corresponding number (1-4).
      */
-    private char convertIntToCorrectOption(int correctInt) {
-        return switch (correctInt) {
-            case 1 -> 'A';
-            case 2 -> 'B';
-            case 3 -> 'C';
-            case 4 -> 'D';
-            default -> 'A'; // fallback
-        };
+    private int charToNumber(char ch) {
+        switch (Character.toUpperCase(ch)) {
+            case 'A': return 1;
+            case 'B': return 2;
+            case 'C': return 3;
+            case 'D': return 4;
+            default: return 1; // fallback
+        }
     }
 }
