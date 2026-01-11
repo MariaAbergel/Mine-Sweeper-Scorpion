@@ -7,36 +7,35 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
+import javax.swing.border.*;
 import java.awt.*;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Simple admin/debug screen to view/add/edit/delete questions and persist to CSV.
- * Styled with the "black neon" theme.
- */
 public class QuestionManagementFrame extends JFrame {
 
     private final QuestionManager manager;
     private final DefaultTableModel model;
-
-
     private final Runnable onExitToMenu;
 
-    // Colors (Same as GameHistoryFrame)
+    // Colors
     private static final Color BG_COLOR = Color.BLACK;
     private static final Color TEXT_COLOR = Color.WHITE;
-    private static final Color ACCENT_COLOR = new Color(0, 255, 255); // Cyan neon
+    private static final Color ACCENT_COLOR = new Color(0, 255, 255);
     private static final Color TABLE_HEADER_BG = new Color(30, 30, 30);
     private static final Color TABLE_ROW_BG = new Color(20, 20, 20);
     private static final Color TABLE_SELECTION_BG = new Color(60, 60, 80);
 
+    // Neon dialog palette
+    private static final Color DIALOG_BG = new Color(5, 6, 10);
+    private static final Color DIALOG_PANEL = new Color(11, 15, 26);
 
     public QuestionManagementFrame(QuestionManager manager) {
         this(manager, null);
     }
-
 
     public QuestionManagementFrame(QuestionManager manager, Runnable onExitToMenu) {
         super("Question Management");
@@ -45,7 +44,6 @@ public class QuestionManagementFrame extends JFrame {
 
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
 
-        // Set window icon
         try {
             URL iconUrl = getClass().getResource("/ui/icons/img_1.png");
             if (iconUrl != null) {
@@ -60,7 +58,7 @@ public class QuestionManagementFrame extends JFrame {
         model = new DefaultTableModel(cols, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
-                return false; // edit via dialog to keep consistency
+                return false;
             }
         };
 
@@ -71,8 +69,6 @@ public class QuestionManagementFrame extends JFrame {
         JButton btnEdit = createStyledButton("Edit");
         JButton btnDelete = createStyledButton("Delete");
         JButton btnSave = createStyledButton("Save");
-
-
         JButton btnExit = createStyledButton("Back to Menu");
 
         btnAdd.addActionListener(e -> addQuestion());
@@ -80,23 +76,19 @@ public class QuestionManagementFrame extends JFrame {
         btnDelete.addActionListener(e -> deleteQuestion(table.getSelectedRow()));
         btnSave.addActionListener(e -> saveQuestions());
 
-
         btnExit.addActionListener(e -> {
             dispose();
             if (onExitToMenu != null) onExitToMenu.run();
         });
 
-        // ===== Buttons panel (bottom) =====
         JPanel btnPanel = new JPanel(new BorderLayout());
         btnPanel.setBackground(BG_COLOR);
         btnPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        // Left: exit
         JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         left.setBackground(BG_COLOR);
         left.add(btnExit);
 
-        // Right: actions
         JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         right.setBackground(BG_COLOR);
         right.add(btnAdd);
@@ -107,11 +99,8 @@ public class QuestionManagementFrame extends JFrame {
         btnPanel.add(left, BorderLayout.WEST);
         btnPanel.add(right, BorderLayout.EAST);
 
-        // Use BackgroundPanel for the main content
         BackgroundPanel content = new BackgroundPanel("/ui/menu/bg.png");
         content.setLayout(new BorderLayout());
-
-        // Increased top padding to 100 to push table down
         content.setBorder(BorderFactory.createEmptyBorder(100, 20, 10, 20));
 
         content.add(scroll, BorderLayout.CENTER);
@@ -125,10 +114,6 @@ public class QuestionManagementFrame extends JFrame {
         setLocationRelativeTo(null);
     }
 
-    // =======================
-    //   STYLING HELPERS
-    // =======================
-
     private JTable createStyledTable(DefaultTableModel model) {
         JTable table = new JTable(model);
         table.setBackground(TABLE_ROW_BG);
@@ -140,14 +125,12 @@ public class QuestionManagementFrame extends JFrame {
         table.setFont(new Font("Arial", Font.PLAIN, 14));
         table.getTableHeader().setReorderingAllowed(false);
 
-        // Header styling
         JTableHeader header = table.getTableHeader();
         header.setBackground(TABLE_HEADER_BG);
         header.setForeground(ACCENT_COLOR);
         header.setFont(new Font("Arial", Font.BOLD, 14));
         ((DefaultTableCellRenderer) header.getDefaultRenderer()).setHorizontalAlignment(JLabel.CENTER);
 
-        // Center cell content
         DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
         centerRenderer.setHorizontalAlignment(JLabel.CENTER);
         centerRenderer.setBackground(TABLE_ROW_BG);
@@ -155,7 +138,6 @@ public class QuestionManagementFrame extends JFrame {
         for (int i = 0; i < table.getColumnCount(); i++) {
             table.getColumnModel().getColumn(i).setCellRenderer(centerRenderer);
         }
-
         return table;
     }
 
@@ -178,17 +160,42 @@ public class QuestionManagementFrame extends JFrame {
                 BorderFactory.createEmptyBorder(5, 15, 5, 15)
         ));
 
-        // Hover effect
         btn.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseEntered(java.awt.event.MouseEvent evt) {
                 btn.setBackground(new Color(60, 60, 60));
             }
-
             public void mouseExited(java.awt.event.MouseEvent evt) {
                 btn.setBackground(new Color(40, 40, 40));
             }
         });
         return btn;
+    }
+
+    private Border neonBorder(Color c) {
+        return new CompoundBorder(
+                new LineBorder(new Color(c.getRed(), c.getGreen(), c.getBlue(), 200), 2, true),
+                new EmptyBorder(10, 12, 10, 12)
+        );
+    }
+
+    private void styleNeonLabel(JLabel l) {
+        l.setForeground(TEXT_COLOR);
+        l.setFont(new Font("Segoe UI", Font.BOLD, 14));
+    }
+
+    private void styleNeonField(JTextField f) {
+        f.setBackground(DIALOG_PANEL);
+        f.setForeground(TEXT_COLOR);
+        f.setCaretColor(ACCENT_COLOR);
+        f.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        f.setBorder(neonBorder(ACCENT_COLOR));
+    }
+
+    private void styleNeonCombo(JComboBox<?> c) {
+        c.setBackground(DIALOG_PANEL);
+        c.setForeground(TEXT_COLOR);
+        c.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        c.setBorder(neonBorder(ACCENT_COLOR));
     }
 
     private void loadTable() {
@@ -245,81 +252,192 @@ public class QuestionManagementFrame extends JFrame {
         char correct = model.getValueAt(row, 6).toString().charAt(0);
         String diff = model.getValueAt(row, 7).toString();
         List<String> opts = new ArrayList<>();
-        opts.add(a);
-        opts.add(b);
-        opts.add(c);
-        opts.add(d);
+        opts.add(a); opts.add(b); opts.add(c); opts.add(d);
         return new Question(id, text, opts, correct, diff);
     }
 
-    /**
-     * Simple prompt dialog to add/edit a question.
-     */
     private Question promptForQuestion(Question existing) {
-        JTextField idField = new JTextField(existing == null ? "" : String.valueOf(existing.getId()));
-        JTextField textField = new JTextField(existing == null ? "" : existing.getText());
-
-        // safe get options
-        List<String> exOpts = existing == null ? List.of("", "", "", "") : existing.getOptions();
-        while (exOpts.size() < 4) exOpts = new ArrayList<>(exOpts) {{ add(""); }};
-
-        JTextField aField = new JTextField(existing == null ? "" : exOpts.get(0));
-        JTextField bField = new JTextField(existing == null ? "" : exOpts.get(1));
-        JTextField cField = new JTextField(existing == null ? "" : exOpts.get(2));
-        JTextField dField = new JTextField(existing == null ? "" : exOpts.get(3));
-
-        JTextField correctField = new JTextField(existing == null ? "A" : String.valueOf(existing.getCorrectOption()));
-        JTextField diffField = new JTextField(existing == null ? "EASY" : existing.getDifficultyLevel());
-
-        JPanel panel = new JPanel(new GridLayout(0, 2, 6, 6));
-        panel.add(new JLabel("ID:"));
-        panel.add(idField);
-        panel.add(new JLabel("Text:"));
-        panel.add(textField);
-        panel.add(new JLabel("Option A:"));
-        panel.add(aField);
-        panel.add(new JLabel("Option B:"));
-        panel.add(bField);
-        panel.add(new JLabel("Option C:"));
-        panel.add(cField);
-        panel.add(new JLabel("Option D:"));
-        panel.add(dField);
-        panel.add(new JLabel("Correct (A-D):"));
-        panel.add(correctField);
-        panel.add(new JLabel("Difficulty (EASY/MEDIUM/HARD/EXPERT):"));
-        panel.add(diffField);
-
-        int res = JOptionPane.showConfirmDialog(this, panel,
-                existing == null ? "Add Question" : "Edit Question",
-                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        if (res != JOptionPane.OK_OPTION) return null;
-
-        try {
-            int id = Integer.parseInt(idField.getText().trim());
-            String text = textField.getText().trim();
-            List<String> opts = new ArrayList<>();
-            opts.add(aField.getText().trim());
-            opts.add(bField.getText().trim());
-            opts.add(cField.getText().trim());
-            opts.add(dField.getText().trim());
-
-            String corr = correctField.getText().trim().toUpperCase();
-            if (corr.isEmpty()) throw new IllegalArgumentException("Correct option is empty.");
-            char correct = corr.charAt(0);
-            if (correct < 'A' || correct > 'D') throw new IllegalArgumentException("Correct must be A-D.");
-
-            String diff = diffField.getText().trim();
-            return new Question(id, text, opts, correct, diff);
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Invalid input: " + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
-            return null;
-        }
+        NeonQuestionDialog dialog = new NeonQuestionDialog(this, existing);
+        dialog.setVisible(true);
+        return dialog.getResult();
     }
 
     // =======================
-    //   BACKGROUND PANEL
+    //   NEON ADD/EDIT DIALOG
     // =======================
+    private class NeonQuestionDialog extends JDialog {
+
+        private Question result = null;
+
+        private final JTextField idField = new JTextField();
+        private final JTextField textField = new JTextField();
+        private final JTextField aField = new JTextField();
+        private final JTextField bField = new JTextField();
+        private final JTextField cField = new JTextField();
+        private final JTextField dField = new JTextField();
+
+        private final JComboBox<String> correctCombo =
+                new JComboBox<>(new String[]{"A", "B", "C", "D"});
+
+        private final JComboBox<String> diffCombo =
+                new JComboBox<>(new String[]{"EASY", "MEDIUM", "HARD", "EXPERT"});
+
+        private boolean resizing = false;
+
+        NeonQuestionDialog(JFrame owner, Question existing) {
+            super(owner, existing == null ? "Add Question" : "Edit Question", true);
+            setDefaultCloseOperation(DISPOSE_ON_CLOSE);
+
+            // limit field width so they don't stretch too much
+            int fieldW = 360;
+            Dimension fieldMax = new Dimension(fieldW, 36);
+            for (JTextField f : new JTextField[]{idField, textField, aField, bField, cField, dField}) {
+                f.setPreferredSize(new Dimension(fieldW, 36));
+                f.setMaximumSize(fieldMax);
+            }
+
+            JPanel root = new JPanel(new BorderLayout(14, 14));
+            root.setBackground(DIALOG_BG);
+            root.setBorder(new EmptyBorder(16, 16, 16, 16));
+
+            JLabel header = new JLabel(existing == null ? "➕ Add New Question" : "✏️ Edit Question");
+            header.setForeground(ACCENT_COLOR);
+            header.setFont(new Font("Segoe UI", Font.BOLD, 22));
+            root.add(header, BorderLayout.NORTH);
+
+            JPanel card = new JPanel(new GridBagLayout());
+            card.setBackground(DIALOG_PANEL);
+            card.setBorder(neonBorder(ACCENT_COLOR));
+
+            GridBagConstraints gc = new GridBagConstraints();
+            gc.insets = new Insets(8, 8, 8, 8);
+            gc.fill = GridBagConstraints.HORIZONTAL;
+            gc.weightx = 1;
+
+            if (existing != null) {
+                idField.setText(String.valueOf(existing.getId()));
+                textField.setText(existing.getText());
+
+                List<String> exOpts = new ArrayList<>(existing.getOptions());
+                while (exOpts.size() < 4) exOpts.add("");
+
+                aField.setText(exOpts.get(0));
+                bField.setText(exOpts.get(1));
+                cField.setText(exOpts.get(2));
+                dField.setText(exOpts.get(3));
+
+                correctCombo.setSelectedItem(String.valueOf(existing.getCorrectOption()).toUpperCase());
+                diffCombo.setSelectedItem(existing.getDifficultyLevel());
+            } else {
+                correctCombo.setSelectedItem("A");
+                diffCombo.setSelectedItem("EASY");
+            }
+
+            styleNeonField(idField);
+            styleNeonField(textField);
+            styleNeonField(aField);
+            styleNeonField(bField);
+            styleNeonField(cField);
+            styleNeonField(dField);
+            styleNeonCombo(correctCombo);
+            styleNeonCombo(diffCombo);
+
+            addRow(card, gc, 0, "ID", idField);
+            addRow(card, gc, 1, "Text", textField);
+            addRow(card, gc, 2, "Option A", aField);
+            addRow(card, gc, 3, "Option B", bField);
+            addRow(card, gc, 4, "Option C", cField);
+            addRow(card, gc, 5, "Option D", dField);
+            addRow(card, gc, 6, "Correct", correctCombo);
+            addRow(card, gc, 7, "Difficulty", diffCombo);
+
+            // put card inside scroll so UI stays clean on square resizing
+            JScrollPane sc = new JScrollPane(card);
+            sc.setBorder(BorderFactory.createEmptyBorder());
+            sc.getViewport().setBackground(DIALOG_BG);
+            sc.setOpaque(false);
+
+            root.add(sc, BorderLayout.CENTER);
+
+            JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+            buttons.setBackground(DIALOG_BG);
+
+            JButton btnCancel = createStyledButton("Cancel");
+            JButton btnSave = createStyledButton("Save");
+
+            btnCancel.addActionListener(e -> dispose());
+            btnSave.addActionListener(e -> onSave(existing));
+
+            buttons.add(btnCancel);
+            buttons.add(btnSave);
+            root.add(buttons, BorderLayout.SOUTH);
+
+            setContentPane(root);
+
+            // Start square + allow resizing
+            pack();
+            int start = 560;
+            setSize(start, start);
+            setResizable(true);
+            setMinimumSize(new Dimension(520, 520));
+            setLocationRelativeTo(owner);
+
+            // Keep it square while resizing
+            addComponentListener(new ComponentAdapter() {
+                @Override
+                public void componentResized(ComponentEvent e) {
+                    if (resizing) return;
+                    resizing = true;
+
+                    int s = Math.max(getWidth(), getHeight());
+                    Dimension min = getMinimumSize();
+                    s = Math.max(s, Math.max(min.width, min.height));
+                    setSize(s, s);
+
+                    resizing = false;
+                }
+            });
+        }
+
+        private void addRow(JPanel card, GridBagConstraints gc, int row, String label, JComponent input) {
+            JLabel l = new JLabel(label + ":");
+            styleNeonLabel(l);
+
+            gc.gridx = 0; gc.gridy = row; gc.weightx = 0;
+            card.add(l, gc);
+
+            gc.gridx = 1; gc.gridy = row; gc.weightx = 1;
+            card.add(input, gc);
+        }
+
+        private void onSave(Question existing) {
+            try {
+                int id = Integer.parseInt(idField.getText().trim());
+                String text = textField.getText().trim();
+                if (text.isEmpty()) throw new IllegalArgumentException("Text is empty.");
+
+                List<String> opts = new ArrayList<>();
+                opts.add(aField.getText().trim());
+                opts.add(bField.getText().trim());
+                opts.add(cField.getText().trim());
+                opts.add(dField.getText().trim());
+
+                char correct = correctCombo.getSelectedItem().toString().charAt(0);
+                String diff = diffCombo.getSelectedItem().toString().trim();
+
+                result = new Question(id, text, opts, correct, diff);
+                dispose();
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Invalid input: " + ex.getMessage(),
+                        "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+
+        public Question getResult() {
+            return result;
+        }
+    }
+
     private static class BackgroundPanel extends JPanel {
         private Image backgroundImage;
 
