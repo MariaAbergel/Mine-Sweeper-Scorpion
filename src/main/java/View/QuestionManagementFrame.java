@@ -99,7 +99,7 @@ public class QuestionManagementFrame extends JFrame {
         btnPanel.add(btnSave);
 
         // Use BackgroundPanel for the main content
-        BackgroundPanel content = new BackgroundPanel("/ui/menu/bg.png");
+        BackgroundPanel content = new BackgroundPanel("/ui/menu/question_management_bg.png");
         content.setLayout(new BorderLayout());
         
         // Increased top padding to 100 to push table down
