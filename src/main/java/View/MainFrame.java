@@ -11,7 +11,6 @@ import java.net.URL;
  * Manages navigation between:
  * - MainMenuPanel (home screen)
  * - StartPanel    (enter players + difficulty)
- * - HowToPlayPanel (game instructions)
  * - GamePanel     (actual game)
  *
  * Communicates with the Model layer only through GameController (MVC).
@@ -26,7 +25,6 @@ public class MainFrame extends JFrame
 
     private MainMenuPanel mainMenuPanel;
     private StartPanel startPanel;
-    private HowToPlayPanel howToPlayPanel;
     private GamePanel gamePanel;   // created when starting a game
 
     // Styling constants
@@ -57,16 +55,15 @@ public class MainFrame extends JFrame
             System.err.println("Could not load icon: " + e.getMessage());
         }
 
+        // Admin/debug menu for question management & history
+        setJMenuBar(buildMenuBar());
 
         // ===== create screens (cards) =====
         mainMenuPanel = new MainMenuPanel(this);   // first screen with 4 buttons
         startPanel    = new StartPanel(this);      // existing screen
-        howToPlayPanel = new HowToPlayPanel(this::onBackToMenu); // How to play panel
 
         cardPanel.add(mainMenuPanel, "MENU");
         cardPanel.add(startPanel,    "START");
-        cardPanel.add(howToPlayPanel, "HOWTOPLAY");
-        // "GAME" card will be added later when game starts
 
         setContentPane(cardPanel);
 
@@ -74,6 +71,7 @@ public class MainFrame extends JFrame
         setSize(900, 700);
         setLocationRelativeTo(null);
 
+        // show first screen
         cardLayout.show(cardPanel, "MENU");
         setVisible(true);
     }
@@ -81,6 +79,7 @@ public class MainFrame extends JFrame
     // =================================================================
     //  Callbacks from StartPanel (StartGameListener)
     // =================================================================
+
     @Override
     public void onStartGame(String player1Name, String player2Name, String difficultyKey) {
         controller.startNewGame(difficultyKey);
@@ -112,7 +111,6 @@ public class MainFrame extends JFrame
                 }
         );
 
-
         cardPanel.add(gamePanel, "GAME");
         cardLayout.show(cardPanel, "GAME");
     }
@@ -134,14 +132,14 @@ public class MainFrame extends JFrame
 
     @Override
     public void onHistoryClicked() {
-        //  pass a callback so GameHistoryFrame can return to menu without coupling
         GameHistoryFrame historyFrame = new GameHistoryFrame(controller, this::showMainMenu);
         historyFrame.setVisible(true);
     }
 
+
     @Override
     public void onHowToPlayClicked() {
-        cardLayout.show(cardPanel, "HOWTOPLAY");
+        showHowToPlayDialog();
     }
 
     @Override
@@ -156,6 +154,7 @@ public class MainFrame extends JFrame
     private JMenuBar buildMenuBar() {
         JMenuBar bar = new JMenuBar();
 
+        // === Game menu ===
         JMenu gameMenu = new JMenu("Game");
         JMenuItem historyItem = new JMenuItem("Game History");
 
@@ -163,6 +162,7 @@ public class MainFrame extends JFrame
         gameMenu.add(historyItem);
         bar.add(gameMenu);
 
+        // === Admin menu ===
         JMenu admin = new JMenu("Admin");
         JMenuItem manageQuestions = new JMenuItem("Question Management");
 
@@ -174,13 +174,66 @@ public class MainFrame extends JFrame
     }
 
     // =================================================================
-    //  Helpers: Admin access
+    //  Helpers: How to play + Admin access
     // =================================================================
 
-    /**
-     * Simple admin gate for Question Management.
-     * Uses a custom styled dialog.
-     */
+    private void showHowToPlayDialog() {
+        JDialog dialog = new JDialog(this, "How to Play", true);
+        dialog.setUndecorated(true);
+        dialog.setSize(550, 430); // Sized to fit text + title
+        dialog.setLocationRelativeTo(this);
+
+        JPanel contentPanel = new JPanel(new BorderLayout());
+        contentPanel.setBackground(Color.BLACK);
+        contentPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ACCENT_COLOR, 2),
+                BorderFactory.createEmptyBorder(20, 30, 20, 30)
+        ));
+
+        // --- TITLE ---
+        JLabel titleLabel = new JLabel("HOW TO PLAY", SwingConstants.CENTER);
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        titleLabel.setForeground(Color.WHITE);
+        titleLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0)); // small gap below title
+        contentPanel.add(titleLabel, BorderLayout.NORTH);
+
+        // --- TEXT CONTENT ---
+        String html = "<html><body style='width: 450px; color: white; font-family: Arial; font-size: 11px;'>" +
+                "<p style='margin-top: 0;'><b>Two players, each has a board.</b><br>" +
+                "You share lives and score.</p>" +
+                "<p><b>Your turn:</b><br>" +
+                "Left click = reveal a cell.<br>" +
+                "Right click = flag a cell you think is a mine.<br>" +
+                "• After your move, the turn switches.</p>" +
+                "<p><b>Cell types:</b><br>" +
+                "<span style='color: #FF5050;'>Mine</span> – losing a life if revealed.<br>" +
+                "<span style='color: #50B4FF;'>Number</span> – tells how many mines around.<br>" +
+                "<span style='color: #FFFF00;'>Question (Q)</span> – after reveal, you can pay points and answer a quiz (correct gives bonus, wrong can hurt).<br>" +
+                "<span style='color: #FF00FF;'>Surprise (S)</span> – after reveal, you can pay points for random good/bad effect.</p>" +
+                "<p><b>Win / Lose:</b><br>" +
+                "Win = all safe cells cleared.<br>" +
+                "Lose = shared lives reach 0.<br>" +
+                "Remaining lives turn into extra score at the end.</p>" +
+                "</body></html>";
+
+        JLabel textLabel = new JLabel(html);
+        textLabel.setVerticalAlignment(SwingConstants.TOP);
+        contentPanel.add(textLabel, BorderLayout.CENTER);
+
+        // --- CLOSE BUTTON ---
+        JButton closeBtn = createStyledButton("OK");
+        closeBtn.addActionListener(e -> dialog.dispose());
+
+        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        btnPanel.setOpaque(false);
+        btnPanel.add(closeBtn);
+
+        contentPanel.add(btnPanel, BorderLayout.SOUTH);
+
+        dialog.setContentPane(contentPanel);
+        dialog.setVisible(true);
+    }
+
     private void handleAdminQuestionManagement() {
         JDialog dialog = new JDialog(this, "Admin Access", true);
         dialog.setUndecorated(true);
@@ -235,9 +288,8 @@ public class MainFrame extends JFrame
             if ("ADMIN".equals(input)) {
                 dialog.dispose();
                 QuestionManagementFrame frame =
-                        new QuestionManagementFrame(controller.getQuestionManager(), this::showMainMenu);
+                        new QuestionManagementFrame(controller.getQuestionManager());
                 frame.setVisible(true);
-
             } else {
                 JOptionPane.showMessageDialog(dialog,
                         "Access denied.",
