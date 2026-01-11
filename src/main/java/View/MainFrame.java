@@ -74,7 +74,6 @@ public class MainFrame extends JFrame
         setSize(900, 700);
         setLocationRelativeTo(null);
 
-        // show first screen
         cardLayout.show(cardPanel, "MENU");
         setVisible(true);
     }
@@ -82,11 +81,6 @@ public class MainFrame extends JFrame
     // =================================================================
     //  Callbacks from StartPanel (StartGameListener)
     // =================================================================
-
-    /**
-     * Callback from StartPanel when the user starts a new game.
-     * Initializes the game in the controller and switches to the GamePanel.
-     */
     @Override
     public void onStartGame(String player1Name, String player2Name, String difficultyKey) {
         controller.startNewGame(difficultyKey);
@@ -107,7 +101,6 @@ public class MainFrame extends JFrame
             cardPanel.remove(gamePanel);
         }
 
-        // Pass a callback to return to the menu when the game ends
         gamePanel = new GamePanel(
                 controller,
                 player1Name,
@@ -124,11 +117,6 @@ public class MainFrame extends JFrame
         cardLayout.show(cardPanel, "GAME");
     }
 
-
-    /**
-     * Callback from StartPanel when the user presses the BACK button.
-     * Returns to the main menu screen.
-     */
     @Override
     public void onBackToMenu() {
         startPanel.resetFields();
@@ -139,26 +127,23 @@ public class MainFrame extends JFrame
     //  Callbacks from MainMenuPanel (MainMenuListener)
     // =================================================================
 
-    /** User pressed "START GAME" on the main menu. */
     @Override
     public void onStartGameClicked() {
         cardLayout.show(cardPanel, "START");
     }
 
-    /** User pressed "GAMES HISTORY" on the main menu. */
     @Override
     public void onHistoryClicked() {
-        GameHistoryFrame historyFrame = new GameHistoryFrame(controller);
+        // ✅ pass a callback so GameHistoryFrame can return to menu without coupling
+        GameHistoryFrame historyFrame = new GameHistoryFrame(controller, this::showMainMenu);
         historyFrame.setVisible(true);
     }
 
-    /** User pressed "HOW TO PLAY" on the main menu. */
     @Override
     public void onHowToPlayClicked() {
         cardLayout.show(cardPanel, "HOWTOPLAY");
     }
 
-    /** User pressed "QUESTION MANAGEMENT (ADMIN)" on the main menu. */
     @Override
     public void onManageQuestionsClicked() {
         handleAdminQuestionManagement();
@@ -171,7 +156,6 @@ public class MainFrame extends JFrame
     private JMenuBar buildMenuBar() {
         JMenuBar bar = new JMenuBar();
 
-        // === Game menu ===
         JMenu gameMenu = new JMenu("Game");
         JMenuItem historyItem = new JMenuItem("Game History");
 
@@ -179,7 +163,6 @@ public class MainFrame extends JFrame
         gameMenu.add(historyItem);
         bar.add(gameMenu);
 
-        // === Admin menu ===
         JMenu admin = new JMenu("Admin");
         JMenuItem manageQuestions = new JMenuItem("Question Management");
 
@@ -200,7 +183,7 @@ public class MainFrame extends JFrame
      */
     private void handleAdminQuestionManagement() {
         JDialog dialog = new JDialog(this, "Admin Access", true);
-        dialog.setUndecorated(true); // Remove window decorations for cleaner look
+        dialog.setUndecorated(true);
         dialog.setLayout(new BorderLayout());
 
         JPanel content = new JPanel(new BorderLayout(10, 10));
@@ -210,7 +193,6 @@ public class MainFrame extends JFrame
                 BorderFactory.createEmptyBorder(30, 20, 20, 20)
         ));
 
-        // --- FIX: Using standard JLabel so text is always visible ---
         JLabel lbl = new JLabel("Enter Admin Password:", SwingConstants.CENTER);
         lbl.setForeground(Color.WHITE);
         lbl.setFont(new Font("Arial", Font.BOLD, 16));
@@ -225,7 +207,6 @@ public class MainFrame extends JFrame
         ));
         pwd.setFont(new Font("Arial", Font.PLAIN, 16));
 
-        // Wrap password field in a panel to prevent stretching
         JPanel pwdPanel = new JPanel();
         pwdPanel.setBackground(BG_COLOR);
         pwdPanel.add(pwd);
@@ -249,7 +230,6 @@ public class MainFrame extends JFrame
 
         btnCancel.addActionListener(e -> dialog.dispose());
 
-        // Handle "OK" button
         btnOk.addActionListener(e -> {
             String input = new String(pwd.getPassword());
             if ("ADMIN".equals(input)) {
@@ -266,9 +246,7 @@ public class MainFrame extends JFrame
             }
         });
 
-        // Allow "Enter" key to submit
         dialog.getRootPane().setDefaultButton(btnOk);
-
         dialog.setVisible(true);
     }
 
@@ -297,10 +275,6 @@ public class MainFrame extends JFrame
     public void showMainMenu() {
         cardLayout.show(cardPanel, "MENU");
     }
-
-    // =================================================================
-    //  Application entry point
-    // =================================================================
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(MainFrame::new);
