@@ -64,7 +64,6 @@ public class MainFrame extends JFrame
 
         cardPanel.add(mainMenuPanel, "MENU");
         cardPanel.add(startPanel,    "START");
-        // "GAME" card will be added later when game starts
 
         setContentPane(cardPanel);
 
@@ -72,7 +71,6 @@ public class MainFrame extends JFrame
         setSize(900, 700);
         setLocationRelativeTo(null);
 
-        // show first screen
         cardLayout.show(cardPanel, "MENU");
         setVisible(true);
     }
@@ -80,11 +78,6 @@ public class MainFrame extends JFrame
     // =================================================================
     //  Callbacks from StartPanel (StartGameListener)
     // =================================================================
-
-    /**
-     * Callback from StartPanel when the user starts a new game.
-     * Initializes the game in the controller and switches to the GamePanel.
-     */
     @Override
     public void onStartGame(String player1Name, String player2Name, String difficultyKey) {
         controller.startNewGame(difficultyKey);
@@ -94,55 +87,43 @@ public class MainFrame extends JFrame
             cardPanel.remove(gamePanel);
         }
 
-        // Pass a callback to return to the menu when the game ends
         gamePanel = new GamePanel(
                 controller,
                 player1Name,
                 player2Name,
-                () -> {
-                    // Action to perform when back/exit is clicked in GamePanel
-                    cardLayout.show(cardPanel, "MENU");
-                }
+                this::showMainMenu
         );
 
         cardPanel.add(gamePanel, "GAME");
         cardLayout.show(cardPanel, "GAME");
     }
 
-
-    /**
-     * Callback from StartPanel when the user presses the BACK button.
-     * Returns to the main menu screen.
-     */
     @Override
     public void onBackToMenu() {
-        cardLayout.show(cardPanel, "MENU");
+        showMainMenu();
     }
 
     // =================================================================
     //  Callbacks from MainMenuPanel (MainMenuListener)
     // =================================================================
 
-    /** User pressed "START GAME" on the main menu. */
     @Override
     public void onStartGameClicked() {
         cardLayout.show(cardPanel, "START");
     }
 
-    /** User pressed "GAMES HISTORY" on the main menu. */
     @Override
     public void onHistoryClicked() {
-        GameHistoryFrame historyFrame = new GameHistoryFrame(controller);
+        // ✅ pass a callback so GameHistoryFrame can return to menu without coupling
+        GameHistoryFrame historyFrame = new GameHistoryFrame(controller, this::showMainMenu);
         historyFrame.setVisible(true);
     }
 
-    /** User pressed "HOW TO PLAY" on the main menu. */
     @Override
     public void onHowToPlayClicked() {
         showHowToPlayDialog();
     }
 
-    /** User pressed "QUESTION MANAGEMENT (ADMIN)" on the main menu. */
     @Override
     public void onManageQuestionsClicked() {
         handleAdminQuestionManagement();
@@ -155,7 +136,6 @@ public class MainFrame extends JFrame
     private JMenuBar buildMenuBar() {
         JMenuBar bar = new JMenuBar();
 
-        // === Game menu ===
         JMenu gameMenu = new JMenu("Game");
         JMenuItem historyItem = new JMenuItem("Game History");
 
@@ -163,7 +143,6 @@ public class MainFrame extends JFrame
         gameMenu.add(historyItem);
         bar.add(gameMenu);
 
-        // === Admin menu ===
         JMenu admin = new JMenu("Admin");
         JMenuItem manageQuestions = new JMenuItem("Question Management");
 
@@ -190,8 +169,7 @@ public class MainFrame extends JFrame
                         "Cell types:\n" +
                         "Mine – losing a life if revealed.\n" +
                         "Number – tells how many mines around.\n" +
-                        "Question (Q) – " +
-                        "after reveal, you can pay points and answer a quiz\n" +
+                        "Question (Q) – after reveal, you can pay points and answer a quiz\n" +
                         "(correct gives bonus, wrong can hurt).\n" +
                         "Surprise (S) – after reveal, you can pay points for random good/bad effect.\n\n" +
                         "Win / Lose:\n" +
@@ -207,14 +185,9 @@ public class MainFrame extends JFrame
         );
     }
 
-
-    /**
-     * Simple admin gate for Question Management.
-     * Uses a custom styled dialog.
-     */
     private void handleAdminQuestionManagement() {
         JDialog dialog = new JDialog(this, "Admin Access", true);
-        dialog.setUndecorated(true); // Remove window decorations for cleaner look
+        dialog.setUndecorated(true);
         dialog.setLayout(new BorderLayout());
 
         JPanel content = new JPanel(new BorderLayout(10, 10));
@@ -224,7 +197,6 @@ public class MainFrame extends JFrame
                 BorderFactory.createEmptyBorder(30, 20, 20, 20)
         ));
 
-        // --- FIX: Using standard JLabel so text is always visible ---
         JLabel lbl = new JLabel("Enter Admin Password:", SwingConstants.CENTER);
         lbl.setForeground(Color.WHITE);
         lbl.setFont(new Font("Arial", Font.BOLD, 16));
@@ -239,7 +211,6 @@ public class MainFrame extends JFrame
         ));
         pwd.setFont(new Font("Arial", Font.PLAIN, 16));
 
-        // Wrap password field in a panel to prevent stretching
         JPanel pwdPanel = new JPanel();
         pwdPanel.setBackground(BG_COLOR);
         pwdPanel.add(pwd);
@@ -263,7 +234,6 @@ public class MainFrame extends JFrame
 
         btnCancel.addActionListener(e -> dialog.dispose());
 
-        // Handle "OK" button
         btnOk.addActionListener(e -> {
             String input = new String(pwd.getPassword());
             if ("ADMIN".equals(input)) {
@@ -280,9 +250,7 @@ public class MainFrame extends JFrame
             }
         });
 
-        // Allow "Enter" key to submit
         dialog.getRootPane().setDefaultButton(btnOk);
-
         dialog.setVisible(true);
     }
 
@@ -311,10 +279,6 @@ public class MainFrame extends JFrame
     public void showMainMenu() {
         cardLayout.show(cardPanel, "MENU");
     }
-
-    // =================================================================
-    //  Application entry point
-    // =================================================================
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(MainFrame::new);
