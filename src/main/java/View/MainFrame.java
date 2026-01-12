@@ -6,15 +6,9 @@ import javax.swing.*;
 import java.awt.*;
 import java.net.URL;
 
-/**
- * Main application frame.
- * Manages navigation between:
- * - MainMenuPanel (home screen)
- * - StartPanel    (enter players + difficulty)
- * - GamePanel     (actual game)
- * <p>
- * Communicates with the Model layer only through GameController (MVC).
- */
+import util.SoundManager;
+import util.SoundToggleOverlay;
+
 public class MainFrame extends JFrame
         implements StartPanel.StartGameListener,
         MainMenuPanel.MainMenuListener {
@@ -55,10 +49,9 @@ public class MainFrame extends JFrame
             System.err.println("Could not load icon: " + e.getMessage());
         }
 
-
         // ===== create screens (cards) =====
-        mainMenuPanel = new MainMenuPanel(this);   // first screen with 4 buttons
-        startPanel = new StartPanel(this);      // existing screen
+        mainMenuPanel = new MainMenuPanel(this);
+        startPanel = new StartPanel(this);
 
         cardPanel.add(mainMenuPanel, "MENU");
         cardPanel.add(startPanel, "START");
@@ -66,16 +59,27 @@ public class MainFrame extends JFrame
         setContentPane(cardPanel);
 
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-
-// open maximized
         setExtendedState(JFrame.MAXIMIZED_BOTH);
-
-// (optional) allow resizing
         setResizable(true);
 
+        // Show first screen
         cardLayout.show(cardPanel, "MENU");
+
+        // ✅ Attach global sound toggle overlay (shows on all cards)
+        SoundToggleOverlay.attach(this);
+
+        // Window close cleanup
+        addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowClosing(java.awt.event.WindowEvent e) {
+                SoundManager.stop();
+            }
+        });
+
         setVisible(true);
 
+        // Start global background music
+        SoundManager.playLoop("/audio/bg_music.wav");
     }
 
     // =================================================================
@@ -85,6 +89,7 @@ public class MainFrame extends JFrame
     @Override
     public void onStartGame(String player1Name, String player2Name, String difficultyKey) {
         controller.startNewGame(difficultyKey);
+
         controller.registerQuestionPresenter(q -> {
             GameController.QuestionDTO dto = controller.buildQuestionDTO(q);
 
@@ -107,8 +112,8 @@ public class MainFrame extends JFrame
                 player1Name,
                 player2Name,
                 () -> {
-                    controller.endGame();     // clear model
-                    startPanel.resetFields(); // clear names + reset difficulty
+                    controller.endGame();
+                    startPanel.resetFields();
                     cardLayout.show(cardPanel, "MENU");
                 }
         );
@@ -138,7 +143,6 @@ public class MainFrame extends JFrame
         historyFrame.setVisible(true);
     }
 
-
     @Override
     public void onHowToPlayClicked() {
         showHowToPlayDialog();
@@ -150,39 +154,13 @@ public class MainFrame extends JFrame
     }
 
     // =================================================================
-    //  Menu bar
-    // =================================================================
-
-    private JMenuBar buildMenuBar() {
-        JMenuBar bar = new JMenuBar();
-
-        // === Game menu ===
-        JMenu gameMenu = new JMenu("Game");
-        JMenuItem historyItem = new JMenuItem("Game History");
-
-        historyItem.addActionListener(e -> onHistoryClicked());
-        gameMenu.add(historyItem);
-        bar.add(gameMenu);
-
-        // === Admin menu ===
-        JMenu admin = new JMenu("Admin");
-        JMenuItem manageQuestions = new JMenuItem("Question Management");
-
-        manageQuestions.addActionListener(e -> handleAdminQuestionManagement());
-        admin.add(manageQuestions);
-        bar.add(admin);
-
-        return bar;
-    }
-
-    // =================================================================
-    //  Helpers: How to play + Admin access
+    //  Helpers
     // =================================================================
 
     private void showHowToPlayDialog() {
         JDialog dialog = new JDialog(this, "How to Play", true);
         dialog.setUndecorated(true);
-        dialog.setSize(550, 430); // Sized to fit text + title
+        dialog.setSize(550, 430);
         dialog.setLocationRelativeTo(this);
 
         JPanel contentPanel = new JPanel(new BorderLayout());
@@ -192,14 +170,12 @@ public class MainFrame extends JFrame
                 BorderFactory.createEmptyBorder(20, 30, 20, 30)
         ));
 
-        // --- TITLE ---
         JLabel titleLabel = new JLabel("HOW TO PLAY", SwingConstants.CENTER);
         titleLabel.setFont(new Font("Arial", Font.BOLD, 18));
         titleLabel.setForeground(Color.WHITE);
-        titleLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0)); // small gap below title
+        titleLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
         contentPanel.add(titleLabel, BorderLayout.NORTH);
 
-        // --- TEXT CONTENT ---
         String html = "<html><body style='width: 450px; color: white; font-family: Arial; font-size: 11px;'>" +
                 "<p style='margin-top: 0;'><b>Two players, each has a board.</b><br>" +
                 "You share lives and score.</p>" +
@@ -222,14 +198,12 @@ public class MainFrame extends JFrame
         textLabel.setVerticalAlignment(SwingConstants.TOP);
         contentPanel.add(textLabel, BorderLayout.CENTER);
 
-        // --- CLOSE BUTTON ---
         JButton closeBtn = createStyledButton("OK");
         closeBtn.addActionListener(e -> dialog.dispose());
 
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
         btnPanel.setOpaque(false);
         btnPanel.add(closeBtn);
-
         contentPanel.add(btnPanel, BorderLayout.SOUTH);
 
         dialog.setContentPane(contentPanel);
@@ -289,8 +263,7 @@ public class MainFrame extends JFrame
             String input = new String(pwd.getPassword());
             if ("ADMIN".equals(input)) {
                 dialog.dispose();
-                QuestionManagementFrame frame =
-                        new QuestionManagementFrame(controller.getQuestionManager());
+                QuestionManagementFrame frame = new QuestionManagementFrame(controller.getQuestionManager());
                 frame.setVisible(true);
             } else {
                 JOptionPane.showMessageDialog(dialog,
