@@ -7,11 +7,8 @@ public class MainMenuPanel extends JPanel {
 
     public interface MainMenuListener {
         void onStartGameClicked();
-
         void onHistoryClicked();
-
         void onHowToPlayClicked();
-
         void onManageQuestionsClicked();
     }
 
@@ -32,7 +29,7 @@ public class MainMenuPanel extends JPanel {
         bg.setLayout(null);
         add(bg, BorderLayout.CENTER);
 
-        // all buttons are PNG image buttons now
+        // === Menu buttons ===
         btnStart = new IconButton("/ui/menu/start_new_game_btn.png", true);
         btnHistory = new IconButton("/ui/menu/view_game_history_btn.png", true);
         btnHowTo = new IconButton("/ui/menu/how_to_play_btn.png", true);
@@ -63,7 +60,6 @@ public class MainMenuPanel extends JPanel {
                 repaint();
             }
         });
-
     }
 
     @Override
@@ -75,12 +71,12 @@ public class MainMenuPanel extends JPanel {
         int W = bg.getWidth();
         int H = bg.getHeight();
 
-        // 👇 MANUAL CONTROLS (CHANGE THESE)
-        int leftMargin = (int) (W * 0.18);   // move buttons left/right
-        int topStart = (int) (H * 0.31);   // move buttons up/down
-        int btnW = (int) (W * 0.62);   // button width
-        int btnH = (int) (H * 0.090);  // button height
-        int gap = (int) (H * 0.030);  // space between buttons
+        // === Manual layout tuning ===
+        int leftMargin = (int) (W * 0.18);
+        int topStart   = (int) (H * 0.31);
+        int btnW       = (int) (W * 0.62);
+        int btnH       = (int) (H * 0.090);
+        int gap        = (int) (H * 0.030);
 
         int x = leftMargin;
         int y = topStart;
@@ -96,6 +92,4 @@ public class MainMenuPanel extends JPanel {
 
         btnAdmin.setBounds(x, y, btnW, btnH);
     }
-
-
 }

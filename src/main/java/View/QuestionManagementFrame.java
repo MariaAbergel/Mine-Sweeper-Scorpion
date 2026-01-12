@@ -18,6 +18,7 @@ import java.awt.event.ComponentEvent;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+import util.SoundToggleOverlay;
 
 public class QuestionManagementFrame extends JFrame {
 
@@ -165,6 +166,10 @@ public class QuestionManagementFrame extends JFrame {
         content.add(btnPanel, BorderLayout.SOUTH);
 
         setContentPane(content);
+
+
+        SoundToggleOverlay.attach(this);
+
         manager.loadQuestions();   // refresh from file each time frame opens
         loadTable();
 

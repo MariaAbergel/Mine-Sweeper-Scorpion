@@ -18,9 +18,9 @@ public class IconButton extends JComponent {
 
     // Glow tuning
     private float hoverGlowAlpha = 0.22f;
-    private float pressedGlowAlpha = 0.60f;
+    private float pressedGlowAlpha = 0.30f;
     private int hoverGlowPx = 10;
-    private int pressedGlowPx = 18;
+    private int pressedGlowPx = 12;
 
     // Pop tuning
     private double pressedScale = 1.03;
@@ -180,4 +180,21 @@ public class IconButton extends JComponent {
 
         return src.getSubimage(minX, minY, (maxX - minX + 1), (maxY - minY + 1));
     }
+
+    public void setImage(String imgPath) {
+        try {
+            BufferedImage newImg = ImageIO.read(getClass().getResource(imgPath));
+            if (newImg == null) throw new RuntimeException("Image is null: " + imgPath);
+
+            if (cropBlackPadding) {
+                newImg = cropNearBlack(newImg, 18);
+            }
+
+            this.img = newImg;
+            repaint();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed loading: " + imgPath, e);
+        }
+    }
+
 }

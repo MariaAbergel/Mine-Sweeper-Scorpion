@@ -1,8 +1,10 @@
 package View;
 
+
 import Controller.GameController;
 import Controller.GameController.GameHistoryRow;
 import Controller.GameController.PlayerHistoryRow;
+import util.SoundToggleOverlay;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
@@ -26,7 +28,7 @@ public class GameHistoryFrame extends JFrame {
     private JTextField searchBox;
 
     private static final String DIFF_ALL = "All";
-    private static final String RES_ALL = "All";
+    private static final String RES_ALL  = "All";
 
     private static final Color TEXT_COLOR = Color.WHITE;
     private static final Color ACCENT_COLOR = new Color(0, 255, 255);
@@ -47,9 +49,7 @@ public class GameHistoryFrame extends JFrame {
                 "Accuracy", "Duration"
         }, 0) {
             @Override
-            public boolean isCellEditable(int r, int c) {
-                return false;
-            }
+            public boolean isCellEditable(int r, int c) { return false; }
         };
 
         playersModel = new DefaultTableModel(new String[]{
@@ -57,9 +57,7 @@ public class GameHistoryFrame extends JFrame {
                 "Average Accuracy", "Preferred Difficulty"
         }, 0) {
             @Override
-            public boolean isCellEditable(int r, int c) {
-                return false;
-            }
+            public boolean isCellEditable(int r, int c) { return false; }
         };
 
         JTable gamesTable = createStyledTable(gamesModel);
@@ -70,8 +68,8 @@ public class GameHistoryFrame extends JFrame {
         gamesTable.setRowSorter(gSorter);
         gSorter.addRowSorterListener(e -> gamesTable.getTableHeader().repaint());
 
-        gSorter.setComparator(4, (a, b) -> parseInt(a) - parseInt(b)); // score
-        gSorter.setComparator(5, (a, b) -> parseInt(a) - parseInt(b)); // lives
+        gSorter.setComparator(4, (a, b) -> parseInt(a) - parseInt(b));        // score
+        gSorter.setComparator(5, (a, b) -> parseInt(a) - parseInt(b));        // lives
         gSorter.setComparator(7, (a, b) -> parsePercent(a) - parsePercent(b)); // accuracy
         gSorter.setComparator(8, (a, b) -> parseDuration(a) - parseDuration(b)); // duration
 
@@ -86,31 +84,26 @@ public class GameHistoryFrame extends JFrame {
         JScrollPane gamesScroll = createScroll(gamesTable);
         JScrollPane playersScroll = createScroll(playersTable);
 
-        // ================= TOP BAR (SEARCH ONLY) =================
-        // ================= TOP BAR (SEARCH ONLY) =================
+        // ================= TOP BAR (SEARCH LEFT) =================
         JPanel topBar = new JPanel(new BorderLayout());
         topBar.setOpaque(false);
         topBar.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-// Right side (search) - we can push it down safely
-        JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         searchPanel.setOpaque(false);
-
-        searchPanel.setBorder(BorderFactory.createEmptyBorder(14, 0, 0, 0));
+        searchPanel.setBorder(BorderFactory.createEmptyBorder(16, 0, 0, 0));
 
         searchBox = new JTextField(22);
-        searchBox.setPreferredSize(new Dimension(260, 34)); // ⬅️ taller
+        searchBox.setPreferredSize(new Dimension(260, 34));
         searchBox.setMinimumSize(new Dimension(260, 34));
         searchBox.setMaximumSize(new Dimension(260, 34));
-
         searchBox.setBackground(new Color(0, 0, 0, 180));
         searchBox.setForeground(TEXT_COLOR);
         searchBox.setCaretColor(ACCENT_COLOR);
         searchBox.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ACCENT_COLOR, 2),
-                BorderFactory.createEmptyBorder(6, 8, 6, 8) // inner padding
+                BorderFactory.createEmptyBorder(6, 8, 6, 8)
         ));
-
 
         JButton searchBtn = createButton("Search");
         searchBtn.setPreferredSize(new Dimension(90, 34));
@@ -121,8 +114,7 @@ public class GameHistoryFrame extends JFrame {
         searchPanel.add(searchBox);
         searchPanel.add(searchBtn);
 
-        topBar.add(searchPanel, BorderLayout.EAST);
-
+        topBar.add(searchPanel, BorderLayout.WEST);
 
         // ================= FILTER ROW =================
         difficultyFilter = createCombo(new String[]{DIFF_ALL, "EASY", "MEDIUM", "HARD"});
@@ -166,17 +158,19 @@ public class GameHistoryFrame extends JFrame {
         root.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
 
         root.add(topBar, BorderLayout.NORTH);
+
         JPanel tablesWrapper = new JPanel(new BorderLayout());
         tablesWrapper.setOpaque(false);
-
-// 1 cm ≈ 38 pixels
-        tablesWrapper.setBorder(BorderFactory.createEmptyBorder(0, 38, 0, 38));
+        tablesWrapper.setBorder(BorderFactory.createEmptyBorder(0, 38, 0, 38)); // ~1cm padding
 
         tablesWrapper.add(tables, BorderLayout.CENTER);
         root.add(tablesWrapper, BorderLayout.CENTER);
         root.add(bottom, BorderLayout.SOUTH);
 
         setContentPane(root);
+
+        // ✅ Attach global sound icon overlay for this frame
+        SoundToggleOverlay.attach(this);
 
         // ================= EVENTS =================
         difficultyFilter.addActionListener(e -> reload());
@@ -242,8 +236,9 @@ public class GameHistoryFrame extends JFrame {
         c.setForeground(TEXT_COLOR);
         c.setBackground(new Color(20, 20, 20));
 
-        for (int i = 0; i < t.getColumnCount(); i++)
+        for (int i = 0; i < t.getColumnCount(); i++) {
             t.getColumnModel().getColumn(i).setCellRenderer(c);
+        }
 
         return t;
     }
@@ -259,23 +254,25 @@ public class GameHistoryFrame extends JFrame {
                         searchBox.getText().trim()
                 );
 
-        for (GameHistoryRow r : g)
+        for (GameHistoryRow r : g) {
             gamesModel.addRow(new Object[]{
                     r.players, r.dateTime, r.difficulty, r.result,
                     r.finalScore, r.remainingLives,
                     r.correctAnswers, r.accuracy, r.duration
             });
+        }
 
         for (PlayerHistoryRow r :
                 controller.getPlayersHistory(
                         (String) difficultyFilter.getSelectedItem(),
                         (String) resultFilter.getSelectedItem(),
                         searchBox.getText().trim()
-                ))
+                )) {
             playersModel.addRow(new Object[]{
                     r.player, r.totalGames, r.bestScore,
                     r.averageAccuracy, r.preferredDifficulty
             });
+        }
     }
 
     // ================= HEADER ARROWS =================
@@ -295,9 +292,11 @@ public class GameHistoryFrame extends JFrame {
             RowSorter<?> rs = table.getRowSorter();
             if (rs != null && !rs.getSortKeys().isEmpty()) {
                 RowSorter.SortKey k = rs.getSortKeys().get(0);
-                if (k.getColumn() == table.convertColumnIndexToModel(c))
+                if (k.getColumn() == table.convertColumnIndexToModel(c)) {
                     txt = base + (k.getSortOrder() == SortOrder.ASCENDING ? "  ▲" : "  ▼");
+                }
             }
+
             l.setText(txt);
             return l;
         }
@@ -305,19 +304,13 @@ public class GameHistoryFrame extends JFrame {
 
     // ================= PARSERS =================
     private static int parseInt(Object o) {
-        try {
-            return Integer.parseInt(o.toString());
-        } catch (Exception e) {
-            return 0;
-        }
+        try { return Integer.parseInt(o.toString()); }
+        catch (Exception e) { return 0; }
     }
 
     private static int parsePercent(Object o) {
-        try {
-            return Integer.parseInt(o.toString().replace("%", ""));
-        } catch (Exception e) {
-            return 0;
-        }
+        try { return Integer.parseInt(o.toString().replace("%", "")); }
+        catch (Exception e) { return 0; }
     }
 
     private static int parseDuration(Object o) {
