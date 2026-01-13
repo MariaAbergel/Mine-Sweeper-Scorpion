@@ -29,17 +29,19 @@ public class GamePanel extends JPanel {
     // Bottom status
     private JLabel lblScore;
     private JLabel lblLives;
+    private JLabel lblTime;
     private JPanel heartsPanel;
     private java.util.List<NeonHeart> heartLabels;
 
     // Control Buttons
     private IconButton btnRestart;
     private IconButton btnExit;
-    private final long startTimeMillis;
+    private long startTimeMillis;
     private JPanel wrap1;
     private JPanel wrap2;
     private JPanel centerPanel;
     private Timer resizeStabilizer;
+    private Timer gameTimer;
     private final Runnable onBackToMenu;
 
     private JLabel toastLabel;
@@ -233,7 +235,7 @@ public class GamePanel extends JPanel {
 // a bit taller so we have space to push the group down
         footer.setPreferredSize(new Dimension(1, 145)); // 120 -> 130 (tweak)
 
-// ---- SCORE + LIVES ----
+// ---- SCORE + LIVES + TIME ----
         JPanel scoreLivesPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 30, 0));
         scoreLivesPanel.setOpaque(false);
 
@@ -245,8 +247,13 @@ public class GamePanel extends JPanel {
         lblLives.setForeground(Color.WHITE);
         lblLives.setFont(new Font("Arial", Font.BOLD, 18));
 
+        lblTime = new JLabel("TIME: 00:00");
+        lblTime.setForeground(Color.WHITE);
+        lblTime.setFont(new Font("Arial", Font.BOLD, 18));
+
         scoreLivesPanel.add(lblScore);
         scoreLivesPanel.add(lblLives);
+        scoreLivesPanel.add(lblTime);
 
 // ---- HEARTS ----
         heartsPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 6, 0));
@@ -285,6 +292,10 @@ public class GamePanel extends JPanel {
         btnRestart.setOnClick(() -> {
             controller.restartGame();
 
+            // Reset timer
+            startTimeMillis = System.currentTimeMillis();
+            if (gameTimer != null) gameTimer.restart();
+
             // refresh view
             updateStatus();
             updateTurnUI();
@@ -296,6 +307,7 @@ public class GamePanel extends JPanel {
         });
 
         btnExit.setOnClick(() -> {
+            if (gameTimer != null) gameTimer.stop();
             controller.endGame(); // clears currentGame
             if (onBackToMenu != null) onBackToMenu.run(); // go to menu
         });
@@ -321,7 +333,15 @@ public class GamePanel extends JPanel {
             requestResizeBoards(); // second pass after layout settles
         });
 
-
+        // Initialize and start the game timer
+        gameTimer = new Timer(1000, e -> {
+            long elapsedMillis = System.currentTimeMillis() - startTimeMillis;
+            long elapsedSeconds = elapsedMillis / 1000;
+            long minutes = elapsedSeconds / 60;
+            long seconds = elapsedSeconds % 60;
+            lblTime.setText(String.format("TIME: %02d:%02d", minutes, seconds));
+        });
+        gameTimer.start();
     }
 
 
@@ -531,6 +551,8 @@ public class GamePanel extends JPanel {
      * Handles the visual changes and dialog when the game ends.
      */
     private void handleGameOverUI() {
+        if (gameTimer != null) gameTimer.stop();
+
         boardPanel1.setWaiting(true);
         boardPanel2.setWaiting(true);
         boardPanel1.refresh();
@@ -558,6 +580,11 @@ public class GamePanel extends JPanel {
 
         if (action == GameResultDialog.ResultAction.RESTART) {
             controller.restartGame();
+
+            // Reset timer
+            startTimeMillis = System.currentTimeMillis();
+            if (gameTimer != null) gameTimer.restart();
+
             updateStatus();
             updateTurnUI();
             boardPanel1.refresh();
