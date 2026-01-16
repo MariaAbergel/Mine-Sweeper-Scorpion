@@ -7,8 +7,13 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.net.URL;
+import java.util.HashMap;
+import java.util.Map;
 
 public class IconButton extends JComponent {
+    // --- CACHE: Stores loaded images so we don't read disk again ---
+    private static final Map<String, BufferedImage> IMAGE_CACHE = new HashMap<>();
+
     private BufferedImage img;
     private boolean hover = false;
     private boolean pressed = false;
@@ -52,6 +57,14 @@ public class IconButton extends JComponent {
     }
 
     private void loadImage(String path) {
+        // 1. Check Cache First (Instant)
+        String cacheKey = path + ":" + cropBlackPadding;
+        if (IMAGE_CACHE.containsKey(cacheKey)) {
+            this.img = IMAGE_CACHE.get(cacheKey);
+            return;
+        }
+
+        // 2. Load from Disk (Slow - happens only once now)
         try {
             URL url = getClass().getResource(path);
             if (url == null) {
@@ -59,17 +72,20 @@ public class IconButton extends JComponent {
                 return;
             }
             BufferedImage loadedImg = ImageIO.read(url);
+
             if (cropBlackPadding) {
                 this.img = cropNearBlack(loadedImg, 18);
             } else {
                 this.img = loadedImg;
             }
+
+            // 3. Save to Cache
+            IMAGE_CACHE.put(cacheKey, this.img);
+
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
-
-    // --- Methods restored for compatibility ---
 
     public void setImage(String path) {
         loadImage(path);
@@ -131,12 +147,11 @@ public class IconButton extends JComponent {
         for (int y = 0; y < h; y++) {
             for (int x = 0; x < w; x++) {
                 int argb = src.getRGB(x, y);
-                if (((argb >>> 24) & 0xFF) == 0) continue; // Skip transparent
+                if (((argb >>> 24) & 0xFF) == 0) continue;
                 int r = (argb >>> 16) & 0xFF;
                 int g = (argb >>> 8) & 0xFF;
                 int b = argb & 0xFF;
 
-                // If NOT near black, extend bounds
                 if (!(r <= threshold && g <= threshold && b <= threshold)) {
                     if (x < minX) minX = x;
                     if (y < minY) minY = y;
@@ -146,10 +161,8 @@ public class IconButton extends JComponent {
             }
         }
 
-        // Return original if completely black or empty
         if (maxX < minX || maxY < minY) return src;
 
-        // Safe padding calculation (Fixes RasterFormatException)
         int pad = 6;
         int realX = Math.max(0, minX - pad);
         int realY = Math.max(0, minY - pad);

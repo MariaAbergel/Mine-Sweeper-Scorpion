@@ -4,8 +4,6 @@ import Controller.GameController;
 import util.LanguageManager;
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 
 public class MainMenuPanel extends JPanel {
 
@@ -26,9 +24,11 @@ public class MainMenuPanel extends JPanel {
     private IconButton btnAdmin;
     private final IconButton btnLanguage;
 
-    // The new notification label
     private final JLabel toastLabel;
     private final Timer toastTimer;
+
+    // --- Thinking Icon Path ---
+    private static final String THINKING_ICON = "/ui/menu/thinking.png";
 
     public MainMenuPanel(MainMenuListener listener) {
         this.listener = listener;
@@ -42,25 +42,19 @@ public class MainMenuPanel extends JPanel {
 
         // -- LANGUAGE BUTTON --
         btnLanguage = new IconButton("/ui/menu/lang_btn.png", true);
-        btnLanguage.setOnClick(() -> {
-            toggleLanguageLogic();
-            refreshButtonIcons();
-            showLanguageToast(); // Show the text label
-            if (listener != null) listener.onLanguageToggle();
-        });
+        btnLanguage.setOnClick(this::handleLanguageSwitch); // Use new threaded method
         bg.add(btnLanguage);
 
-        // -- NOTIFICATION LABEL (Small text on black background) --
+        // -- NOTIFICATION LABEL --
         toastLabel = new JLabel("", SwingConstants.CENTER);
         toastLabel.setOpaque(true);
-        toastLabel.setBackground(new Color(0, 0, 0, 180)); // Semi-transparent black
+        toastLabel.setBackground(new Color(0, 0, 0, 180));
         toastLabel.setForeground(Color.WHITE);
         toastLabel.setFont(new Font("Arial", Font.BOLD, 14));
-        toastLabel.setBorder(BorderFactory.createLineBorder(new Color(0, 255, 255), 1)); // Neon blue border
+        toastLabel.setBorder(BorderFactory.createLineBorder(new Color(0, 255, 255), 1));
         toastLabel.setVisible(false);
         bg.add(toastLabel);
 
-        // Timer to hide text after 2 seconds
         toastTimer = new Timer(2000, e -> toastLabel.setVisible(false));
         toastTimer.setRepeats(false);
 
@@ -71,16 +65,59 @@ public class MainMenuPanel extends JPanel {
                 repaint();
             }
         });
+
+        // Pre-load images
+        new Thread(() -> {
+            String[] preloadPaths = {
+                    "/ui/menu/hebrewNewGame.png", "/ui/menu/hebrewHistoryGames.png",
+                    "/ui/menu/hebrewHowToPlay.png", "/ui/menu/hebrewQuestionManager.png",
+                    THINKING_ICON // Preload thinking icon
+            };
+            for (String p : preloadPaths) new IconButton(p, true);
+        }).start();
+    }
+
+    /**
+     * Handles the threading logic for language switching
+     */
+    private void handleLanguageSwitch() {
+        // 1. Show thinking icon immediately
+        btnLanguage.setIconPath(THINKING_ICON);
+        btnLanguage.setOnClick(null); // Disable clicks
+
+        // 2. Background Thread
+        new Thread(() -> {
+            try {
+                // A. Switch Language Logic
+                toggleLanguageLogic();
+
+                // B. Heavy Load
+                GameController.getInstance().getQuestionManager().switchLanguageFromCache();
+
+                // C. Visual Pause (optional, for effect)
+                Thread.sleep(300);
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally {
+                // 3. Update UI on EDT
+                SwingUtilities.invokeLater(() -> {
+                    refreshButtonIcons();
+                    btnLanguage.setIconPath("/ui/menu/lang_btn.png");
+                    showLanguageToast();
+                    btnLanguage.setOnClick(this::handleLanguageSwitch); // Re-enable
+
+                    if (listener != null) listener.onLanguageToggle();
+                });
+            }
+        }).start();
     }
 
     private void showLanguageToast() {
         boolean isHe = GameController.getInstance().getCurrentLanguage() == LanguageManager.Language.HE;
         toastLabel.setText(isHe ? "עברית" : "English");
         toastLabel.setSize(toastLabel.getPreferredSize().width + 20, 30);
-
-        // Force re-layout to position it correctly above the button
         doLayout();
-
         toastLabel.setVisible(true);
         toastTimer.restart();
     }
@@ -113,7 +150,6 @@ public class MainMenuPanel extends JPanel {
 
     private String getIconPath(String action) {
         boolean isHe = GameController.getInstance().getCurrentLanguage() == LanguageManager.Language.HE;
-        // Updated to match your file structure (.png for both english and hebrew)
         return switch (action) {
             case "START" -> isHe ? "/ui/menu/hebrewNewGame.png" : "/ui/menu/start_new_game_btn.png";
             case "HISTORY" -> isHe ? "/ui/menu/hebrewHistoryGames.png" : "/ui/menu/view_game_history_btn.png";
@@ -150,18 +186,15 @@ public class MainMenuPanel extends JPanel {
         btnHowTo.setBounds(leftMargin, topStart + (btnH + gap) * 2, btnW, btnH);
         btnAdmin.setBounds(leftMargin, topStart + (btnH + gap) * 3, btnW, btnH);
 
-        // Language Button: Bottom Right
         int langBtnSize = 50;
         int langMargin = 75;
         int langX = W - langMargin;
         int langY = H - langMargin;
         btnLanguage.setBounds(langX, langY, langBtnSize, langBtnSize);
 
-        // Notification Label: Positioned just above the language button
         if (toastLabel.isVisible()) {
             int lblW = toastLabel.getWidth();
             int lblH = toastLabel.getHeight();
-            // Centered horizontally relative to button, but 10px above it
             toastLabel.setBounds(langX + (langBtnSize - lblW) / 2, langY - lblH - 10, lblW, lblH);
         }
     }
