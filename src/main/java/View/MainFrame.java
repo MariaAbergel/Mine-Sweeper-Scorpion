@@ -5,7 +5,6 @@ import Controller.GameController;
 import javax.swing.*;
 import java.awt.*;
 import java.net.URL;
-import util.LanguageManager;
 import util.SoundManager;
 import util.SoundToggleOverlay;
 
@@ -65,7 +64,7 @@ public class MainFrame extends JFrame
         // Show first screen
         cardLayout.show(cardPanel, "MENU");
 
-        // ✅ Attach global sound toggle overlay (shows on all cards)
+        // Attach global sound toggle overlay (shows on all cards)
         SoundToggleOverlay.attach(this);
 
         // Window close cleanup
@@ -151,6 +150,20 @@ public class MainFrame extends JFrame
     @Override
     public void onManageQuestionsClicked() {
         handleAdminQuestionManagement();
+    }
+
+    @Override
+    public void onLanguageToggle() {
+        // --- UPDATED: No heavy loading here anymore ---
+        // The panels now handle the switching in background threads.
+        // We just need to update other panels that might be listening.
+
+        if (startPanel != null) {
+            startPanel.resetFields();
+        }
+
+        revalidate();
+        repaint();
     }
 
     // =================================================================
@@ -300,20 +313,7 @@ public class MainFrame extends JFrame
         });
         return btn;
     }
-    @Override
-    public void onLanguageToggle() {
-        // 1. Refresh the StartPanel so it updates its text
-        if (startPanel != null) {
-            startPanel.resetFields();
-        }
 
-        // 2. Repaint the frame to apply changes to the window title/layout
-        revalidate();
-        repaint();
-
-        // REMOVED: JOptionPane.showMessageDialog(...)
-        // The small text notification is handled inside MainMenuPanel, so it stays!
-    }
     public void showMainMenu() {
         cardLayout.show(cardPanel, "MENU");
     }
