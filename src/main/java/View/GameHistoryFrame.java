@@ -1,9 +1,9 @@
 package View;
 
-
 import Controller.GameController;
 import Controller.GameController.GameHistoryRow;
 import Controller.GameController.PlayerHistoryRow;
+import util.LanguageManager;
 import util.SoundToggleOverlay;
 
 import javax.swing.*;
@@ -12,6 +12,8 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
 import javax.swing.table.TableRowSorter;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.KeyEvent;
 import java.net.URL;
 import java.util.List;
 
@@ -23,16 +25,30 @@ public class GameHistoryFrame extends JFrame {
     private final DefaultTableModel gamesModel;
     private final DefaultTableModel playersModel;
 
+    // UI Components
     private JComboBox<String> difficultyFilter;
     private JComboBox<String> resultFilter;
     private JTextField searchBox;
+    private JLabel lblSearch, lblDiff, lblResult;
+    private JButton searchBtn;
 
-    private static final String DIFF_ALL = "All";
-    private static final String RES_ALL  = "All";
+    // Layout Containers
+    private JPanel topBar;
+    private JPanel searchPanel;
+    private JPanel filtersPanel;
+    private JTable gamesTable;
+    private JTable playersTable;
 
+    // Language & UI
+    private final IconButton btnLanguage;
+    private final JLabel toastLabel;
+    private final Timer toastTimer;
+    private static final String THINKING_ICON = "/ui/icons/thinking.png";
+
+    // Colors
     private static final Color TEXT_COLOR = Color.WHITE;
     private static final Color ACCENT_COLOR = new Color(0, 255, 255);
-    private static final Color TABLE_HEADER_BG = new Color(30, 30, 30, 240);
+    private static final Color TABLE_HEADER_BG = new Color(30, 30, 30, 255);
     private static final Color TABLE_SELECTION_BG = new Color(60, 60, 80, 200);
 
     public GameHistoryFrame(GameController controller, Runnable onExitToMenu) {
@@ -42,104 +58,81 @@ public class GameHistoryFrame extends JFrame {
         this.onExitToMenu = onExitToMenu;
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
 
+        // ================= ESC KEY BINDING =================
+        getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(
+                KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "EXIT");
+        getRootPane().getActionMap().put("EXIT", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                dispose();
+                if (onExitToMenu != null) onExitToMenu.run();
+            }
+        });
+
         // ================= MODELS =================
-        gamesModel = new DefaultTableModel(new String[]{
-                "Players", "Date / Time", "Difficulty", "Result",
-                "Final Score", "Remaining Lives", "Correct Answers",
-                "Accuracy", "Duration"
-        }, 0) {
-            @Override
-            public boolean isCellEditable(int r, int c) { return false; }
+        gamesModel = new DefaultTableModel(0, 9) {
+            @Override public boolean isCellEditable(int r, int c) { return false; }
         };
 
-        playersModel = new DefaultTableModel(new String[]{
-                "Player", "Total Games", "Best Score",
-                "Average Accuracy", "Preferred Difficulty"
-        }, 0) {
-            @Override
-            public boolean isCellEditable(int r, int c) { return false; }
+        playersModel = new DefaultTableModel(0, 5) {
+            @Override public boolean isCellEditable(int r, int c) { return false; }
         };
 
-        JTable gamesTable = createStyledTable(gamesModel);
-        JTable playersTable = createStyledTable(playersModel);
+        gamesTable = createStyledTable(gamesModel);
+        playersTable = createStyledTable(playersModel);
 
         // ================= SORTING =================
-        TableRowSorter<DefaultTableModel> gSorter = new TableRowSorter<>(gamesModel);
-        gamesTable.setRowSorter(gSorter);
-        gSorter.addRowSorterListener(e -> gamesTable.getTableHeader().repaint());
-
-        gSorter.setComparator(4, (a, b) -> parseInt(a) - parseInt(b));        // score
-        gSorter.setComparator(5, (a, b) -> parseInt(a) - parseInt(b));        // lives
-        gSorter.setComparator(7, (a, b) -> parsePercent(a) - parsePercent(b)); // accuracy
-        gSorter.setComparator(8, (a, b) -> parseDuration(a) - parseDuration(b)); // duration
-
-        TableRowSorter<DefaultTableModel> pSorter = new TableRowSorter<>(playersModel);
-        playersTable.setRowSorter(pSorter);
-        pSorter.addRowSorterListener(e -> playersTable.getTableHeader().repaint());
-
-        pSorter.setComparator(1, (a, b) -> parseInt(a) - parseInt(b));
-        pSorter.setComparator(2, (a, b) -> parseInt(a) - parseInt(b));
-        pSorter.setComparator(3, (a, b) -> parsePercent(a) - parsePercent(b));
+        setupSorters(gamesTable, playersTable);
 
         JScrollPane gamesScroll = createScroll(gamesTable);
         JScrollPane playersScroll = createScroll(playersTable);
 
-        // ================= TOP BAR (SEARCH LEFT) =================
-        JPanel topBar = new JPanel(new BorderLayout());
+        // ================= TOP BAR (SEARCH) =================
+        topBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         topBar.setOpaque(false);
-        topBar.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        topBar.setBorder(BorderFactory.createEmptyBorder(80, 20, 10, 20));
 
-        JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-        searchPanel.setOpaque(false);
-        searchPanel.setBorder(BorderFactory.createEmptyBorder(16, 0, 0, 0));
+        lblSearch = label("Search:");
+        searchBox = new JTextField(15);
+        styleSearchField(searchBox);
+        searchBtn = createButton("Search");
+        searchBtn.setPreferredSize(new Dimension(80, 34));
 
-        searchBox = new JTextField(22);
-        searchBox.setPreferredSize(new Dimension(260, 34));
-        searchBox.setMinimumSize(new Dimension(260, 34));
-        searchBox.setMaximumSize(new Dimension(260, 34));
-        searchBox.setBackground(new Color(0, 0, 0, 180));
-        searchBox.setForeground(TEXT_COLOR);
-        searchBox.setCaretColor(ACCENT_COLOR);
-        searchBox.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ACCENT_COLOR, 2),
-                BorderFactory.createEmptyBorder(6, 8, 6, 8)
-        ));
-
-        JButton searchBtn = createButton("Search");
-        searchBtn.setPreferredSize(new Dimension(90, 34));
-        searchBtn.setMinimumSize(new Dimension(90, 34));
-        searchBtn.setMaximumSize(new Dimension(90, 34));
-
-        searchPanel.add(label("Search:"));
-        searchPanel.add(searchBox);
-        searchPanel.add(searchBtn);
-
-        topBar.add(searchPanel, BorderLayout.WEST);
+        // Add components once
+        topBar.add(lblSearch);
+        topBar.add(searchBox);
+        topBar.add(searchBtn);
 
         // ================= FILTER ROW =================
-        difficultyFilter = createCombo(new String[]{DIFF_ALL, "EASY", "MEDIUM", "HARD"});
-        resultFilter = createCombo(new String[]{RES_ALL, "WON", "LOST"});
+        lblDiff = label("Difficulty:");
+        lblResult = label("Result:");
+        difficultyFilter = createCombo();
+        resultFilter = createCombo();
 
-        JPanel filters = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-        filters.setOpaque(false);
-        filters.add(label("Difficulty:"));
-        filters.add(difficultyFilter);
-        filters.add(label("Result:"));
-        filters.add(resultFilter);
+        filtersPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        filtersPanel.setOpaque(false);
+        filtersPanel.add(lblDiff);
+        filtersPanel.add(difficultyFilter);
+        filtersPanel.add(lblResult);
+        filtersPanel.add(resultFilter);
 
-        // ================= TABLES =================
+        // ================= TABLES LAYOUT =================
         JPanel tables = new JPanel();
         tables.setOpaque(false);
         tables.setLayout(new BoxLayout(tables, BoxLayout.Y_AXIS));
 
-        tables.add(Box.createVerticalStrut(50));
-        tables.add(filters);
-        tables.add(Box.createVerticalStrut(8));
+        tables.add(Box.createVerticalStrut(20));
+        tables.add(filtersPanel);
+        tables.add(Box.createVerticalStrut(10));
         tables.add(gamesScroll);
         tables.add(Box.createVerticalStrut(20));
         tables.add(playersScroll);
 
-        // ================= EXIT BUTTON =================
+        // ================= BOTTOM BAR =================
+        JPanel bottomBar = new JPanel(new BorderLayout());
+        bottomBar.setOpaque(false);
+        bottomBar.setBorder(BorderFactory.createEmptyBorder(0, 10, 10, 10));
+
         IconButton exitBtn = new IconButton("/ui/icons/back.png");
         exitBtn.setPreferredSize(new Dimension(46, 46));
         exitBtn.setSafePadPx(2);
@@ -148,11 +141,22 @@ public class GameHistoryFrame extends JFrame {
             if (onExitToMenu != null) onExitToMenu.run();
         });
 
-        JPanel bottom = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        bottom.setOpaque(false);
-        bottom.add(exitBtn);
+        btnLanguage = new IconButton("/ui/icons/language.png", true);
+        btnLanguage.setPreferredSize(new Dimension(46, 46));
+        btnLanguage.setOnClick(this::handleLanguageSwitch);
 
-        // ================= ROOT =================
+        JPanel leftBottom = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        leftBottom.setOpaque(false);
+        leftBottom.add(exitBtn);
+
+        JPanel rightBottom = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        rightBottom.setOpaque(false);
+        rightBottom.add(btnLanguage);
+
+        bottomBar.add(leftBottom, BorderLayout.WEST);
+        bottomBar.add(rightBottom, BorderLayout.EAST);
+
+        // ================= ROOT PANEL =================
         JPanel root = new BackgroundPanel("/ui/menu/game_history_bg.png");
         root.setLayout(new BorderLayout());
         root.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
@@ -161,15 +165,22 @@ public class GameHistoryFrame extends JFrame {
 
         JPanel tablesWrapper = new JPanel(new BorderLayout());
         tablesWrapper.setOpaque(false);
-        tablesWrapper.setBorder(BorderFactory.createEmptyBorder(0, 38, 0, 38)); // ~1cm padding
-
+        tablesWrapper.setBorder(BorderFactory.createEmptyBorder(0, 30, 0, 30));
         tablesWrapper.add(tables, BorderLayout.CENTER);
+
         root.add(tablesWrapper, BorderLayout.CENTER);
-        root.add(bottom, BorderLayout.SOUTH);
+        root.add(bottomBar, BorderLayout.SOUTH);
+
+        // -- TOAST --
+        toastLabel = new JLabel("", SwingConstants.CENTER);
+        toastLabel.setOpaque(true);
+        toastLabel.setBackground(new Color(0, 0, 0, 180));
+        toastLabel.setForeground(Color.WHITE);
+        toastLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        toastLabel.setBorder(BorderFactory.createLineBorder(new Color(0, 255, 255), 1));
+        toastLabel.setVisible(false);
 
         setContentPane(root);
-
-        // ✅ Attach global sound icon overlay for this frame
         SoundToggleOverlay.attach(this);
 
         // ================= EVENTS =================
@@ -178,14 +189,270 @@ public class GameHistoryFrame extends JFrame {
         searchBtn.addActionListener(e -> reload());
         searchBox.addActionListener(e -> reload());
 
+        toastTimer = new Timer(2000, e -> toastLabel.setVisible(false));
+        toastTimer.setRepeats(false);
+
+        // Initialize UI
+        updateUIText();
+        updateComboItems();
+        reload();
+
         setUndecorated(true);
         setExtendedState(JFrame.MAXIMIZED_BOTH);
         setLocationRelativeTo(null);
-
-        reload();
     }
 
-    // ================= HELPERS =================
+    // ================= LOGIC & UI UPDATES =================
+
+    private void handleLanguageSwitch() {
+        btnLanguage.setIconPath(THINKING_ICON);
+        btnLanguage.setOnClick(null);
+
+        new Thread(() -> {
+            try {
+                GameController gc = GameController.getInstance();
+                if (gc.getCurrentLanguage() == LanguageManager.Language.EN) {
+                    gc.setCurrentLanguage(LanguageManager.Language.HE);
+                } else {
+                    gc.setCurrentLanguage(LanguageManager.Language.EN);
+                }
+                gc.getQuestionManager().switchLanguageFromCache();
+                Thread.sleep(300);
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally {
+                SwingUtilities.invokeLater(() -> {
+                    updateUIText();
+                    updateComboItems();
+                    reload();
+                    showLanguageToast();
+                    btnLanguage.setIconPath("/ui/icons/language.png");
+                    btnLanguage.setOnClick(this::handleLanguageSwitch);
+                    revalidate();
+                    repaint();
+                });
+            }
+        }).start();
+    }
+
+    private void updateUIText() {
+        LanguageManager.Language lang = controller.getCurrentLanguage();
+        boolean isHe = (lang == LanguageManager.Language.HE);
+
+        setTitle(isHe ? "היסטוריית משחקים" : "Game History");
+        lblSearch.setText(isHe ? "חיפוש:" : "Search:");
+        lblDiff.setText(isHe ? "רמת קושי:" : "Difficulty:");
+        lblResult.setText(isHe ? "תוצאה:" : "Result:");
+        searchBtn.setText(isHe ? "חפש" : "Search");
+
+        ComponentOrientation orientation = isHe ? ComponentOrientation.RIGHT_TO_LEFT : ComponentOrientation.LEFT_TO_RIGHT;
+
+        // Update FlowLayout alignment based on language
+        FlowLayout topBarLayout = (FlowLayout) topBar.getLayout();
+        topBarLayout.setAlignment(isHe ? FlowLayout.RIGHT : FlowLayout.LEFT);
+
+        FlowLayout filtersLayout = (FlowLayout) filtersPanel.getLayout();
+        filtersLayout.setAlignment(isHe ? FlowLayout.RIGHT : FlowLayout.LEFT);
+
+        // Rebuild topBar components in correct order
+        topBar.removeAll();
+        if (isHe) {
+            topBar.add(searchBtn);
+            topBar.add(searchBox);
+            topBar.add(lblSearch);
+        } else {
+            topBar.add(lblSearch);
+            topBar.add(searchBox);
+            topBar.add(searchBtn);
+        }
+
+        // Rebuild filtersPanel components in correct order
+        filtersPanel.removeAll();
+        if (isHe) {
+            filtersPanel.add(resultFilter);
+            filtersPanel.add(lblResult);
+            filtersPanel.add(difficultyFilter);
+            filtersPanel.add(lblDiff);
+        } else {
+            filtersPanel.add(lblDiff);
+            filtersPanel.add(difficultyFilter);
+            filtersPanel.add(lblResult);
+            filtersPanel.add(resultFilter);
+        }
+
+        gamesTable.setComponentOrientation(orientation);
+        playersTable.setComponentOrientation(orientation);
+
+        JTableHeader gh = gamesTable.getTableHeader();
+        JTableHeader ph = playersTable.getTableHeader();
+        gh.setComponentOrientation(orientation);
+        ph.setComponentOrientation(orientation);
+
+        gh.resizeAndRepaint();
+        ph.resizeAndRepaint();
+
+        topBar.revalidate();
+        topBar.repaint();
+        filtersPanel.revalidate();
+        filtersPanel.repaint();
+
+        String[] gHeaders = isHe
+                ? new String[]{"שחקנים", "תאריך / שעה", "רמה", "תוצאה", "ניקוד", "חיים", "תשובות נכונות", "דיוק", "משך זמן"}
+                : new String[]{"Players", "Date / Time", "Difficulty", "Result", "Final Score", "Lives Left", "Correct Ans", "Accuracy", "Duration"};
+
+        String[] pHeaders = isHe
+                ? new String[]{"שחקן", "סה\"כ משחקים", "תוצאה טובה", "דיוק ממוצע", "רמה מועדפת"}
+                : new String[]{"Player", "Total Games", "Best Score", "Avg Accuracy", "Pref Difficulty"};
+
+        gamesModel.setColumnIdentifiers(gHeaders);
+        playersModel.setColumnIdentifiers(pHeaders);
+        setupSorters(gamesTable, playersTable);
+    }
+
+    private void updateComboItems() {
+        int diffIdx = difficultyFilter.getSelectedIndex();
+        int resIdx = resultFilter.getSelectedIndex();
+
+        difficultyFilter.removeAllItems();
+        resultFilter.removeAllItems();
+
+        boolean isHe = (controller.getCurrentLanguage() == LanguageManager.Language.HE);
+
+        if (isHe) {
+            difficultyFilter.addItem("הכל");
+            difficultyFilter.addItem("קל");
+            difficultyFilter.addItem("בינוני");
+            difficultyFilter.addItem("קשה");
+            resultFilter.addItem("הכל");
+            resultFilter.addItem("ניצחון");
+            resultFilter.addItem("הפסד");
+        } else {
+            difficultyFilter.addItem("All");
+            difficultyFilter.addItem("EASY");
+            difficultyFilter.addItem("MEDIUM");
+            difficultyFilter.addItem("HARD");
+            resultFilter.addItem("All");
+            resultFilter.addItem("WON");
+            resultFilter.addItem("LOST");
+        }
+
+        if (diffIdx >= 0 && diffIdx < difficultyFilter.getItemCount()) difficultyFilter.setSelectedIndex(diffIdx);
+        else difficultyFilter.setSelectedIndex(0);
+
+        if (resIdx >= 0 && resIdx < resultFilter.getItemCount()) resultFilter.setSelectedIndex(resIdx);
+        else resultFilter.setSelectedIndex(0);
+    }
+
+    private void showLanguageToast() {
+        JLayeredPane lp = getLayeredPane();
+        if (toastLabel.getParent() != null) lp.remove(toastLabel);
+
+        boolean isHe = controller.getCurrentLanguage() == LanguageManager.Language.HE;
+        toastLabel.setText(isHe ? "עברית" : "English");
+
+        Dimension size = toastLabel.getPreferredSize();
+        int w = size.width + 30;
+        int h = 30;
+
+        Point btnLoc = SwingUtilities.convertPoint(btnLanguage.getParent(), btnLanguage.getLocation(), lp);
+        int x = btnLoc.x + (btnLanguage.getWidth() - w) / 2;
+        int y = btnLoc.y - h - 10;
+
+        toastLabel.setBounds(x, y, w, h);
+        lp.add(toastLabel, JLayeredPane.POPUP_LAYER);
+        toastLabel.setVisible(true);
+        toastTimer.restart();
+    }
+
+    // ================= DATA RELOAD =================
+
+    private void reload() {
+        gamesModel.setRowCount(0);
+        playersModel.setRowCount(0);
+
+        String dSel = (String) difficultyFilter.getSelectedItem();
+        String rSel = (String) resultFilter.getSelectedItem();
+        String search = searchBox.getText().trim();
+
+        String dKey = mapToEnglishKey(dSel);
+        String rKey = mapToEnglishKey(rSel);
+
+        boolean isHe = (controller.getCurrentLanguage() == LanguageManager.Language.HE);
+
+        List<GameHistoryRow> g = controller.getGameHistory(dKey, rKey, search);
+
+        for (GameHistoryRow r : g) {
+            gamesModel.addRow(new Object[]{
+                    r.players,
+                    r.dateTime,
+                    translateData(r.difficulty, isHe),
+                    translateData(r.result, isHe),
+                    r.finalScore,
+                    r.remainingLives,
+                    r.correctAnswers,
+                    r.accuracy,
+                    r.duration
+            });
+        }
+
+        for (PlayerHistoryRow r : controller.getPlayersHistory(dKey, rKey, search)) {
+            playersModel.addRow(new Object[]{
+                    r.player,
+                    r.totalGames,
+                    r.bestScore,
+                    r.averageAccuracy,
+                    translateData(r.preferredDifficulty, isHe)
+            });
+        }
+
+        if (gamesTable != null) {
+            gamesTable.revalidate();
+            gamesTable.repaint();
+        }
+    }
+
+    private String mapToEnglishKey(String uiValue) {
+        if (uiValue == null) return "All";
+        return switch (uiValue) {
+            case "הכל", "All" -> "All";
+            case "קל", "EASY" -> "EASY";
+            case "בינוני", "MEDIUM" -> "MEDIUM";
+            case "קשה", "HARD" -> "HARD";
+            case "ניצחון", "WON" -> "WON";
+            case "הפסד", "LOST" -> "LOST";
+            default -> "All";
+        };
+    }
+
+    private String translateData(String data, boolean toHebrew) {
+        if (data == null) return "";
+        if (!toHebrew) return data;
+
+        return switch (data.toUpperCase()) {
+            case "EASY" -> "קל";
+            case "MEDIUM" -> "בינוני";
+            case "HARD" -> "קשה";
+            case "WON" -> "ניצחון";
+            case "LOST" -> "הפסד";
+            default -> data;
+        };
+    }
+
+    // ================= HELPERS & STYLING =================
+
+    private void styleSearchField(JTextField box) {
+        box.setPreferredSize(new Dimension(180, 34));
+        box.setMinimumSize(new Dimension(180, 34));
+        box.setMaximumSize(new Dimension(180, 34));
+        box.setBackground(new Color(0, 0, 0, 180));
+        box.setForeground(TEXT_COLOR);
+        box.setCaretColor(ACCENT_COLOR);
+        box.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ACCENT_COLOR, 2),
+                BorderFactory.createEmptyBorder(6, 8, 6, 8)
+        ));
+    }
+
     private JLabel label(String t) {
         JLabel l = new JLabel(t);
         l.setForeground(TEXT_COLOR);
@@ -193,9 +460,10 @@ public class GameHistoryFrame extends JFrame {
         return l;
     }
 
-    private JComboBox<String> createCombo(String[] items) {
-        JComboBox<String> c = new JComboBox<>(items);
+    private JComboBox<String> createCombo() {
+        JComboBox<String> c = new JComboBox<>();
         c.setFont(new Font("Arial", Font.PLAIN, 14));
+        c.setPreferredSize(new Dimension(100, 30));
         return c;
     }
 
@@ -204,6 +472,8 @@ public class GameHistoryFrame extends JFrame {
         b.setForeground(ACCENT_COLOR);
         b.setBackground(new Color(40, 40, 40));
         b.setBorder(BorderFactory.createLineBorder(ACCENT_COLOR));
+        b.setFocusPainted(false);
+        b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         return b;
     }
 
@@ -226,9 +496,9 @@ public class GameHistoryFrame extends JFrame {
         JTableHeader h = t.getTableHeader();
         h.setForeground(ACCENT_COLOR);
         h.setBackground(TABLE_HEADER_BG);
+        h.setOpaque(false);
         h.setFont(new Font("Arial", Font.BOLD, 14));
         h.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-
         h.setDefaultRenderer(new HeaderRenderer());
 
         DefaultTableCellRenderer c = new DefaultTableCellRenderer();
@@ -239,56 +509,35 @@ public class GameHistoryFrame extends JFrame {
         for (int i = 0; i < t.getColumnCount(); i++) {
             t.getColumnModel().getColumn(i).setCellRenderer(c);
         }
-
         return t;
     }
 
-    private void reload() {
-        gamesModel.setRowCount(0);
-        playersModel.setRowCount(0);
+    private void setupSorters(JTable gTable, JTable pTable) {
+        TableRowSorter<DefaultTableModel> gSorter = new TableRowSorter<>(gamesModel);
+        gTable.setRowSorter(gSorter);
+        gSorter.setComparator(4, (a, b) -> parseInt(a) - parseInt(b));
+        gSorter.setComparator(5, (a, b) -> parseInt(a) - parseInt(b));
+        gSorter.setComparator(7, (a, b) -> parsePercent(a) - parsePercent(b));
+        gSorter.setComparator(8, (a, b) -> parseDuration(a) - parseDuration(b));
 
-        List<GameHistoryRow> g =
-                controller.getGameHistory(
-                        (String) difficultyFilter.getSelectedItem(),
-                        (String) resultFilter.getSelectedItem(),
-                        searchBox.getText().trim()
-                );
-
-        for (GameHistoryRow r : g) {
-            gamesModel.addRow(new Object[]{
-                    r.players, r.dateTime, r.difficulty, r.result,
-                    r.finalScore, r.remainingLives,
-                    r.correctAnswers, r.accuracy, r.duration
-            });
-        }
-
-        for (PlayerHistoryRow r :
-                controller.getPlayersHistory(
-                        (String) difficultyFilter.getSelectedItem(),
-                        (String) resultFilter.getSelectedItem(),
-                        searchBox.getText().trim()
-                )) {
-            playersModel.addRow(new Object[]{
-                    r.player, r.totalGames, r.bestScore,
-                    r.averageAccuracy, r.preferredDifficulty
-            });
-        }
+        TableRowSorter<DefaultTableModel> pSorter = new TableRowSorter<>(playersModel);
+        pTable.setRowSorter(pSorter);
+        pSorter.setComparator(1, (a, b) -> parseInt(a) - parseInt(b));
+        pSorter.setComparator(2, (a, b) -> parseInt(a) - parseInt(b));
+        pSorter.setComparator(3, (a, b) -> parsePercent(a) - parsePercent(b));
     }
 
-    // ================= HEADER ARROWS =================
+    // ================= RENDERERS & PARSERS =================
+
     private static class HeaderRenderer extends DefaultTableCellRenderer {
         @Override
-        public Component getTableCellRendererComponent(
-                JTable table, Object v, boolean s, boolean f, int r, int c) {
-
+        public Component getTableCellRendererComponent(JTable table, Object v, boolean s, boolean f, int r, int c) {
             JLabel l = (JLabel) super.getTableCellRendererComponent(table, v, s, f, r, c);
             l.setHorizontalAlignment(CENTER);
             l.setForeground(ACCENT_COLOR);
             l.setBackground(TABLE_HEADER_BG);
-
             String base = v == null ? "" : v.toString();
             String txt = base + "  ↕";
-
             RowSorter<?> rs = table.getRowSorter();
             if (rs != null && !rs.getSortKeys().isEmpty()) {
                 RowSorter.SortKey k = rs.getSortKeys().get(0);
@@ -296,42 +545,31 @@ public class GameHistoryFrame extends JFrame {
                     txt = base + (k.getSortOrder() == SortOrder.ASCENDING ? "  ▲" : "  ▼");
                 }
             }
-
             l.setText(txt);
             return l;
         }
     }
 
-    // ================= PARSERS =================
     private static int parseInt(Object o) {
-        try { return Integer.parseInt(o.toString()); }
-        catch (Exception e) { return 0; }
+        try { return Integer.parseInt(o.toString()); } catch (Exception e) { return 0; }
     }
-
     private static int parsePercent(Object o) {
-        try { return Integer.parseInt(o.toString().replace("%", "")); }
-        catch (Exception e) { return 0; }
+        try { return Integer.parseInt(o.toString().replace("%", "")); } catch (Exception e) { return 0; }
     }
-
     private static int parseDuration(Object o) {
         try {
             String[] p = o.toString().split(":");
             return Integer.parseInt(p[0]) * 60 + Integer.parseInt(p[1]);
-        } catch (Exception e) {
-            return 0;
-        }
+        } catch (Exception e) { return 0; }
     }
 
     private static class BackgroundPanel extends JPanel {
         private final Image img;
-
         BackgroundPanel(String p) {
             URL u = getClass().getResource(p);
             img = u != null ? new ImageIcon(u).getImage() : null;
         }
-
-        @Override
-        protected void paintComponent(Graphics g) {
+        @Override protected void paintComponent(Graphics g) {
             super.paintComponent(g);
             if (img != null) g.drawImage(img, 0, 0, getWidth(), getHeight(), this);
         }
