@@ -1,12 +1,15 @@
 package View;
 
 import Controller.GameController;
-
-import javax.swing.*;
-import java.awt.*;
-import java.net.URL;
+import util.LanguageManager;
 import util.SoundManager;
 import util.SoundToggleOverlay;
+
+import javax.swing.*;
+import javax.swing.text.html.HTMLEditorKit;
+import javax.swing.text.html.StyleSheet;
+import java.awt.*;
+import java.net.URL;
 
 public class MainFrame extends JFrame
         implements StartPanel.StartGameListener,
@@ -154,14 +157,11 @@ public class MainFrame extends JFrame
 
     @Override
     public void onLanguageToggle() {
-        // --- UPDATED: No heavy loading here anymore ---
         // The panels now handle the switching in background threads.
         // We just need to update other panels that might be listening.
-
         if (startPanel != null) {
             startPanel.resetFields();
         }
-
         revalidate();
         repaint();
     }
@@ -173,45 +173,99 @@ public class MainFrame extends JFrame
     private void showHowToPlayDialog() {
         JDialog dialog = new JDialog(this, "How to Play", true);
         dialog.setUndecorated(true);
-        dialog.setSize(550, 430);
+        dialog.setSize(700, 520);
         dialog.setLocationRelativeTo(this);
+
+        LanguageManager.Language lang = GameController.getInstance().getCurrentLanguage();
+        boolean isHe = (lang == LanguageManager.Language.HE);
 
         JPanel contentPanel = new JPanel(new BorderLayout());
         contentPanel.setBackground(Color.BLACK);
+
         contentPanel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ACCENT_COLOR, 2),
-                BorderFactory.createEmptyBorder(20, 30, 20, 30)
+                BorderFactory.createEmptyBorder(20, 20, 20, 20)
         ));
 
-        JLabel titleLabel = new JLabel("HOW TO PLAY", SwingConstants.CENTER);
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        // Title
+        String titleText = isHe ? "הוראות משחק" : "HOW TO PLAY";
+        JLabel titleLabel = new JLabel(titleText, SwingConstants.CENTER);
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 22));
         titleLabel.setForeground(Color.WHITE);
-        titleLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
+        titleLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 15, 0));
         contentPanel.add(titleLabel, BorderLayout.NORTH);
 
-        String html = "<html><body style='width: 450px; color: white; font-family: Arial; font-size: 11px;'>" +
-                "<p style='margin-top: 0;'><b>Two players, each has a board.</b><br>" +
-                "You share lives and score.</p>" +
-                "<p><b>Your turn:</b><br>" +
-                "Left click = reveal a cell.<br>" +
-                "Right click = flag a cell you think is a mine.<br>" +
-                "• After your move, the turn switches.</p>" +
-                "<p><b>Cell types:</b><br>" +
-                "<span style='color: #FF5050;'>Mine</span> – losing a life if revealed.<br>" +
-                "<span style='color: #50B4FF;'>Number</span> – tells how many mines around.<br>" +
-                "<span style='color: #FFFF00;'>Question (Q)</span> – after reveal, you can pay points and answer a quiz (correct gives bonus, wrong can hurt).<br>" +
-                "<span style='color: #FF00FF;'>Surprise (S)</span> – after reveal, you can pay points for random good/bad effect.</p>" +
-                "<p><b>Win / Lose:</b><br>" +
-                "Win = all safe cells cleared.<br>" +
-                "Lose = shared lives reach 0.<br>" +
-                "Remaining lives turn into extra score at the end.</p>" +
-                "</body></html>";
+        // Use JTextPane for better RTL support
+        JTextPane textPane = new JTextPane();
+        textPane.setContentType("text/html");
+        textPane.setEditable(false);
+        textPane.setOpaque(false);
+        textPane.setBackground(Color.BLACK);
 
-        JLabel textLabel = new JLabel(html);
-        textLabel.setVerticalAlignment(SwingConstants.TOP);
-        contentPanel.add(textLabel, BorderLayout.CENTER);
+        // Set up HTML editor kit with custom styles
+        HTMLEditorKit kit = new HTMLEditorKit();
+        StyleSheet styleSheet = kit.getStyleSheet();
+        styleSheet.addRule("body { color: white; font-family: Arial; font-size: 12px; background-color: black; }");
+        styleSheet.addRule("p { margin-top: 8px; margin-bottom: 8px; }");
+        textPane.setEditorKit(kit);
 
-        JButton closeBtn = createStyledButton("OK");
+        String htmlContent;
+        if (isHe) {
+            // HEBREW CONTENT (RTL)
+            textPane.setComponentOrientation(ComponentOrientation.RIGHT_TO_LEFT);
+            htmlContent = "<html><body dir='rtl' style='text-align: right;'>" +
+                    "<p><b>שני שחקנים, לכל אחד לוח משלו.</b><br>" +
+                    "אתם חולקים חיים וניקוד משותפים.</p>" +
+                    "<p><b>התור שלך:</b><br>" +
+                    "קליק שמאלי = חשיפת תא.<br>" +
+                    "קליק ימני = סימון דגל על חשד למוקש.<br>" +
+                    "• בסיום המהלך, התור עובר לשחקן השני.</p>" +
+                    "<p><b>סוגי תאים:</b><br>" +
+                    "<span style='color: #FF5050;'>מוקש</span> – איבוד חיים בעת חשיפה.<br>" +
+                    "<span style='color: #50B4FF;'>מספר</span> – מציין כמה מוקשים יש מסביב.<br>" +
+                    "<span style='color: #FFFF00;'>שאלה (Q)</span> – בחשיפה, ניתן לשלם נקודות ולענות על חידה (תשובה נכונה נותנת בונוס).<br>" +
+                    "<span style='color: #FF00FF;'>הפתעה (S)</span> – בחשיפה, ניתן לשלם נקודות ולקבל אפקט אקראי (טוב או רע).</p>" +
+                    "<p><b>ניצחון / הפסד:</b><br>" +
+                    "ניצחון = כל התאים הבטוחים נחשפו.<br>" +
+                    "הפסד = החיים המשותפים הגיעו ל-0.<br>" +
+                    "חיים שנותרו מומרים לניקוד בונוס בסוף.</p>" +
+                    "</body></html>";
+        } else {
+            // ENGLISH CONTENT (LTR)
+            textPane.setComponentOrientation(ComponentOrientation.LEFT_TO_RIGHT);
+            htmlContent = "<html><body>" +
+                    "<p><b>Two players, each has a board.</b><br>" +
+                    "You share lives and score.</p>" +
+                    "<p><b>Your turn:</b><br>" +
+                    "Left click = reveal a cell.<br>" +
+                    "Right click = flag a cell you think is a mine.<br>" +
+                    "• After your move, the turn switches.</p>" +
+                    "<p><b>Cell types:</b><br>" +
+                    "<span style='color: #FF5050;'>Mine</span> – losing a life if revealed.<br>" +
+                    "<span style='color: #50B4FF;'>Number</span> – tells how many mines around.<br>" +
+                    "<span style='color: #FFFF00;'>Question (Q)</span> – after reveal, you can pay points and answer a quiz (correct gives bonus, wrong can hurt).<br>" +
+                    "<span style='color: #FF00FF;'>Surprise (S)</span> – after reveal, you can pay points for random good/bad effect.</p>" +
+                    "<p><b>Win / Lose:</b><br>" +
+                    "Win = all safe cells cleared.<br>" +
+                    "Lose = shared lives reach 0.<br>" +
+                    "Remaining lives turn into extra score at the end.</p>" +
+                    "</body></html>";
+        }
+
+        textPane.setText(htmlContent);
+        textPane.setCaretPosition(0);
+
+        // Wrap in a panel with padding
+        JPanel textWrapper = new JPanel(new BorderLayout());
+        textWrapper.setOpaque(false);
+        textWrapper.setBorder(BorderFactory.createEmptyBorder(10, 15, 10, 15));
+        textWrapper.add(textPane, BorderLayout.CENTER);
+
+        contentPanel.add(textWrapper, BorderLayout.CENTER);
+
+        // Button
+        String btnText = isHe ? "אישור" : "OK";
+        JButton closeBtn = createStyledButton(btnText);
         closeBtn.addActionListener(e -> dialog.dispose());
 
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
