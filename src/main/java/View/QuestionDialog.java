@@ -121,7 +121,8 @@ public class QuestionDialog extends JDialog {
             boolean isCorrect = (selectedChar == correctChar);
             result = isCorrect ? GameController.QuestionAnswerResult.CORRECT
                     : GameController.QuestionAnswerResult.WRONG;
-
+            if (isCorrect) util.SoundManager.correctAnswer();
+            else util.SoundManager.wrongAnswer();
             dispose();
         });
 

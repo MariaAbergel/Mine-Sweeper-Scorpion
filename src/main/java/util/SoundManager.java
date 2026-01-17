@@ -13,6 +13,11 @@ public final class SoundManager {
 
     private static final float BG_VOLUME_DB = -18.0f;
     private static final float CLICK_VOLUME_DB = -8.0f;
+    private static Clip correctClip;
+    private static Clip wrongClip;
+
+    private static final float CORRECT_VOLUME_DB = -6.0f;
+    private static final float WRONG_VOLUME_DB = -6.0f;
 
     private SoundManager() {
     }
@@ -23,7 +28,14 @@ public final class SoundManager {
     public static void init() {
         clickClip = loadClip("/audio/ui_click.wav");
         setVolume(clickClip, CLICK_VOLUME_DB);
+
+        correctClip = loadClip("/audio/correct_answer.wav");
+        wrongClip = loadClip("/audio/wrong_answer.wav");
+
+        setVolume(correctClip, CORRECT_VOLUME_DB);
+        setVolume(wrongClip, WRONG_VOLUME_DB);
     }
+
 
     /**
      * Play UI click
@@ -117,4 +129,15 @@ public final class SoundManager {
     public static void stop() {
         stopBackground();
     }
+
+    public static void correctAnswer() {
+        if (muted) return;
+        play(correctClip);
+    }
+
+    public static void wrongAnswer() {
+        if (muted) return;
+        play(wrongClip);
+    }
+
 }
