@@ -45,7 +45,6 @@ public class QuestionManagementFrame extends JFrame {
     private final JButton btnAdd;
     private final JButton btnEdit;
     private final JButton btnDelete;
-    private final JButton btnSave;
 
     private final IconButton btnLanguage;
     private final JLabel toastLabel;
@@ -111,7 +110,6 @@ public class QuestionManagementFrame extends JFrame {
         btnAdd = createStyledButton("Add");
         btnEdit = createStyledButton("Edit");
         btnDelete = createStyledButton("Delete");
-        btnSave = createStyledButton("Save");
 
         IconButton btnExit = new IconButton("/ui/icons/back.png");
         btnExit.setPreferredSize(new Dimension(46, 46));
@@ -152,7 +150,7 @@ public class QuestionManagementFrame extends JFrame {
                         JOptionPane.WARNING_MESSAGE);
             }
         });
-        btnSave.addActionListener(e -> saveQuestions());
+
 
         // Layout - Button Panel
         JPanel btnPanel = new JPanel(new BorderLayout());
@@ -163,7 +161,7 @@ public class QuestionManagementFrame extends JFrame {
         left.setOpaque(false); left.add(btnExit);
 
         JPanel center = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
-        center.setOpaque(false); center.add(btnAdd); center.add(btnEdit); center.add(btnDelete); center.add(btnSave);
+        center.setOpaque(false); center.add(btnAdd); center.add(btnEdit); center.add(btnDelete);
 
         JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
         right.setOpaque(false); right.add(btnLanguage);
@@ -600,7 +598,6 @@ public class QuestionManagementFrame extends JFrame {
         btnAdd.setText(isHe ? "הוסף" : "Add");
         btnEdit.setText(isHe ? "ערוך" : "Edit");
         btnDelete.setText(isHe ? "מחק" : "Delete");
-        btnSave.setText(isHe ? "שמור" : "Save");
 
         diffLabel.setText(isHe ? "רמת קושי:" : "Difficulty:");
         corrLabel.setText(isHe ? "תשובה נכונה:" : "Correct:");

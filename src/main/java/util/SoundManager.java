@@ -9,7 +9,7 @@ public class SoundManager {
     private static boolean muted = false;
     private static String currentTrack;
 
-    private static final float DEFAULT_VOLUME_DB = -22.0f; // calm background volume
+    private static final float DEFAULT_VOLUME_DB = -18.0f; // calm background volume
 
     /** Play background music in a loop (only once) */
     public static void playLoop(String resourcePath) {
