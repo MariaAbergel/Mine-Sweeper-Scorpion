@@ -88,11 +88,20 @@ public class QuestionManagementFrame extends JFrame {
         model = new DefaultTableModel(cols, 0) {
             @Override
             public boolean isCellEditable(int row, int column) { return false; }
+
+            @Override
+            public Class<?> getColumnClass(int column) {
+                if (column == 0) return Integer.class; // ID
+                return String.class;
+            }
         };
+
+
 
         table = createStyledTable(model);
         sorter = new TableRowSorter<>(model);
         table.setRowSorter(sorter);
+        sorter.setSortKeys(List.of(new RowSorter.SortKey(0, SortOrder.ASCENDING)));
 
         // Custom Sorters
         sorter.setComparator(0, (a, b) -> Integer.compare(parseIntSafe(a), parseIntSafe(b)));
@@ -748,12 +757,13 @@ public class QuestionManagementFrame extends JFrame {
             // Store correct answer as letter A-D
             char correctLetter = Character.toUpperCase(q.getCorrectOption());
             model.addRow(new Object[]{
-                    q.getId(),
+                    Integer.valueOf(q.getId()),
                     q.getText(),
                     o.get(0), o.get(1), o.get(2), o.get(3),
                     String.valueOf(correctLetter),
                     translateDifficulty(q.getDifficultyLevel(), isHe)
             });
+
         }
         applyFilters();
     }
