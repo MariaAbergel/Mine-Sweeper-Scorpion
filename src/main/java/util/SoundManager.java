@@ -18,6 +18,11 @@ public final class SoundManager {
 
     private static final float CORRECT_VOLUME_DB = -6.0f;
     private static final float WRONG_VOLUME_DB = -6.0f;
+    private static Clip winClip;
+    private static Clip loseClip;
+
+    private static final float WIN_VOLUME_DB = -5.0f;
+    private static final float LOSE_VOLUME_DB = -5.0f;
 
     private SoundManager() {
     }
@@ -34,6 +39,12 @@ public final class SoundManager {
 
         setVolume(correctClip, CORRECT_VOLUME_DB);
         setVolume(wrongClip, WRONG_VOLUME_DB);
+        winClip  = loadClip("/audio/win_game.wav");
+        loseClip = loadClip("/audio/lose_game.wav");
+
+        setVolume(winClip, WIN_VOLUME_DB);
+        setVolume(loseClip, LOSE_VOLUME_DB);
+
     }
 
 
@@ -138,6 +149,15 @@ public final class SoundManager {
     public static void wrongAnswer() {
         if (muted) return;
         play(wrongClip);
+    }
+    public static void winGame() {
+        if (muted) return;
+        play(winClip);
+    }
+
+    public static void loseGame() {
+        if (muted) return;
+        play(loseClip);
     }
 
 }
