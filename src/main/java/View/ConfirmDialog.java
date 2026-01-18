@@ -272,4 +272,61 @@ public class ConfirmDialog extends JDialog {
             g2.dispose();
         }
     }
+
+    public static void showInfo(Window owner, String titleText, String bodyText, Color accentColor, boolean isHebrew) {
+        ConfirmDialog dlg = new ConfirmDialog(owner, titleText, bodyText, accentColor, isHebrew);
+        dlg.convertToInfoMode(isHebrew); // <-- change buttons to OK only
+        dlg.setVisible(true);
+    }
+    private void convertToInfoMode(boolean isHebrew) {
+
+        // contentPane is already the BackgroundPanel root
+        Container root = getContentPane();
+        if (root.getComponentCount() == 0) return;
+
+        // root contains "content"
+        Component contentComp = root.getComponent(0);
+        if (!(contentComp instanceof Container content)) return;
+
+        // content layout: [TitleCard, body, actions]
+        if (content.getComponentCount() < 3) return;
+
+        Component actionsComp = content.getComponent(content.getComponentCount() - 1);
+        if (!(actionsComp instanceof JPanel actions)) return;
+
+        actions.removeAll();
+
+        String okText = isHebrew ? "אישור" : "OK";
+        JButton ok = new JButton(okText);
+        styleButton(ok, true, accentColor);
+
+        ok.addActionListener(e -> {
+            SoundManager.click();
+            accepted = true;
+            dispose();
+        });
+
+        actions.add(ok);
+
+        // ESC should also close like OK (optional)
+        getRootPane().registerKeyboardAction(
+                e -> {
+                    SoundManager.click();
+                    accepted = true;
+                    dispose();
+                },
+                KeyStroke.getKeyStroke("ESCAPE"),
+                JComponent.WHEN_IN_FOCUSED_WINDOW
+        );
+
+        getRootPane().setDefaultButton(ok);
+
+        pack();          // IMPORTANT: recalc size after removing buttons
+        setLocationRelativeTo(getOwner());
+
+        actions.revalidate();
+        actions.repaint();
+    }
+
+
 }

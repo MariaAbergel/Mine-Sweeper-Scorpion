@@ -58,6 +58,8 @@ public final class SoundManager {
 
         exitDialogClip = loadClip("/audio/exit_dialog.wav");
         setVolume(exitDialogClip, EXIT_DIALOG_VOLUME_DB);
+
+
     }
 
 

@@ -132,9 +132,23 @@ public class BoardPanel extends JPanel {
                 if (!ok) {
                     String msg = controller.getAndClearLastActionMessage();
                     if (msg != null && !msg.isBlank()) {
-                        OutcomeDialog.show(SwingUtilities.getWindowAncestor(this), "FLAGS", msg);
+
+                        // sound for this popup
+                        SoundManager.exitDialog();
+
+                        boolean isHebrew = controller.getCurrentLanguage() == LanguageManager.Language.HE;
+                        ConfirmDialog.showInfo(
+                                SwingUtilities.getWindowAncestor(this),
+                                isHebrew ? "דגלים" : "FLAGS",
+                                msg,
+                                new Color(65, 255, 240), // same cyan as restart
+                                isHebrew
+                        );
                     }
                 }
+
+
+
             }
         } else {
             boolean wasRevealed = controller.isCellRevealed(boardNumber, r, c);
