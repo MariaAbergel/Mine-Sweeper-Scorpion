@@ -22,6 +22,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import util.SoundManager;
+import View.ConfirmDialog;
 
 public class QuestionManagementFrame extends JFrame {
 
@@ -293,14 +294,19 @@ public class QuestionManagementFrame extends JFrame {
 
         boolean isHe = (GameController.getInstance().getCurrentLanguage() == LanguageManager.Language.HE);
 
-        // Confirmation dialog
-        int confirm = JOptionPane.showConfirmDialog(this,
-                isHe ? "האם אתה בטוח שברצונך למחוק שאלה זו?" : "Are you sure you want to delete this question?",
-                isHe ? "אישור מחיקה" : "Confirm Delete",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.WARNING_MESSAGE);
+        String title = isHe ? "מחיקת שאלה" : "Delete Question";
+        String msg = isHe
+                ? "האם אתה בטוח שברצונך למחוק את השאלה הזו?\nלא ניתן לבטל פעולה זו."
+                : "Are you sure you want to delete this question?\nThis action cannot be undone.";
 
-        if (confirm != JOptionPane.YES_OPTION) return;
+        // optional: play dialog-open sound (choose what you like)
+        SoundManager.exitDialog(); // or SoundManager.specialCellDialog();
+
+        // blue accent like restart dialog vibe
+        Color accentBlue = new Color(0, 255, 255);
+
+        boolean confirm = ConfirmDialog.show(this, title, msg, accentBlue, isHe);
+        if (!confirm) return;
 
         int id = Integer.parseInt(model.getValueAt(row, 0).toString());
         manager.deleteQuestion(id);
@@ -309,6 +315,7 @@ public class QuestionManagementFrame extends JFrame {
         loadTable();
         applyFilters();
     }
+
 
     private void saveQuestions() {
         manager.saveQuestions();
