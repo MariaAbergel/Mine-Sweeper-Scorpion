@@ -16,6 +16,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.net.URL;
 import java.util.List;
+import util.SoundManager;
 
 public class GameHistoryFrame extends JFrame {
 
@@ -78,7 +79,8 @@ public class GameHistoryFrame extends JFrame {
 
         gamesTable = createStyledTable(gamesModel);
         playersTable = createStyledTable(playersModel);
-
+        attachHeaderClickSound(gamesTable);
+        attachHeaderClickSound(playersTable);
         setupSorters(gamesTable, playersTable);
 
         JScrollPane gamesScroll = createScroll(gamesTable);
@@ -102,6 +104,10 @@ public class GameHistoryFrame extends JFrame {
         lblResult = label("Result:");
         difficultyFilter = createCombo();
         resultFilter = createCombo();
+        attachTypingSound(searchBox);     // typing in search
+        attachClickSound(searchBtn);      // click on Search button
+        attachComboClickSound(difficultyFilter); // click when choosing difficulty
+        attachComboClickSound(resultFilter);     // click when choosing result
 
         // Sort hint label
         lblSortHint = new JLabel();
@@ -568,4 +574,62 @@ public class GameHistoryFrame extends JFrame {
             if (img != null) g.drawImage(img, 0, 0, getWidth(), getHeight(), this);
         }
     }
+
+
+    // --- Sounds helpers ---
+
+    private void attachClickSound(AbstractButton btn) {
+        btn.addActionListener(e -> SoundManager.click());
+    }
+
+    private void attachComboClickSound(JComboBox<?> combo) {
+        combo.addActionListener(e -> {
+            // prevents clicks during init/updateComboItems
+            if (!combo.isShowing()) return;
+            SoundManager.click();
+        });
+    }
+
+    private void attachHeaderClickSound(JTable table) {
+        JTableHeader header = table.getTableHeader();
+        header.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mousePressed(java.awt.event.MouseEvent e) {
+                SoundManager.click();
+            }
+        });
+    }
+
+    private void attachTypingSound(JTextField field) {
+        final int cooldownMs = 35;
+        final long[] last = {0L};
+
+        field.addKeyListener(new java.awt.event.KeyAdapter() {
+            @Override
+            public void keyTyped(java.awt.event.KeyEvent e) {
+                char ch = e.getKeyChar();
+                if (Character.isISOControl(ch)) return;
+
+                long now = System.currentTimeMillis();
+                if (now - last[0] >= cooldownMs) {
+                    SoundManager.typeKey();
+                    last[0] = now;
+                }
+            }
+
+            @Override
+            public void keyPressed(java.awt.event.KeyEvent e) {
+                if (e.getKeyCode() == java.awt.event.KeyEvent.VK_BACK_SPACE ||
+                        e.getKeyCode() == java.awt.event.KeyEvent.VK_DELETE) {
+
+                    long now = System.currentTimeMillis();
+                    if (now - last[0] >= cooldownMs) {
+                        SoundManager.typeKey();
+                        last[0] = now;
+                    }
+                }
+            }
+        });
+    }
+
 }

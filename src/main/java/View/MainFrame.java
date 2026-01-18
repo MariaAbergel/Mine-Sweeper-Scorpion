@@ -260,7 +260,11 @@ public class MainFrame extends JFrame
 
         String btnText = isHe ? "אישור" : "OK";
         JButton closeBtn = createStyledButton(btnText);
-        closeBtn.addActionListener(e -> dialog.dispose());
+        closeBtn.addActionListener(e -> {
+            SoundManager.click();   // play click sound
+            dialog.dispose();       // close
+        });
+
 
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
         btnPanel.setOpaque(false);
@@ -296,6 +300,35 @@ public class MainFrame extends JFrame
         lbl.setFont(new Font("Arial", Font.BOLD, 16));
 
         JPasswordField pwd = new JPasswordField(15);
+        final int cooldownMs = 35;
+        final long[] last = {0L};
+
+        pwd.addKeyListener(new java.awt.event.KeyAdapter() {
+            @Override
+            public void keyTyped(java.awt.event.KeyEvent e) {
+                char ch = e.getKeyChar();
+                if (Character.isISOControl(ch)) return;
+
+                long now = System.currentTimeMillis();
+                if (now - last[0] >= cooldownMs) {
+                    SoundManager.typeKey();
+                    last[0] = now;
+                }
+            }
+
+            @Override
+            public void keyPressed(java.awt.event.KeyEvent e) {
+                if (e.getKeyCode() == java.awt.event.KeyEvent.VK_BACK_SPACE ||
+                        e.getKeyCode() == java.awt.event.KeyEvent.VK_DELETE) {
+
+                    long now = System.currentTimeMillis();
+                    if (now - last[0] >= cooldownMs) {
+                        SoundManager.typeKey();
+                        last[0] = now;
+                    }
+                }
+            }
+        });
         pwd.setBackground(new Color(20, 20, 20));
         pwd.setForeground(ACCENT_COLOR);
         pwd.setCaretColor(ACCENT_COLOR);
@@ -317,6 +350,18 @@ public class MainFrame extends JFrame
 
         JButton btnOk = createStyledButton(okText);
         JButton btnCancel = createStyledButton(cancelText);
+        btnOk.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override public void mousePressed(java.awt.event.MouseEvent e) {
+                SoundManager.click();
+            }
+        });
+
+        btnCancel.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override public void mousePressed(java.awt.event.MouseEvent e) {
+                SoundManager.click();
+            }
+        });
+
 
         if (isHe) {
             btnPanel.add(btnCancel);

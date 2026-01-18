@@ -8,6 +8,9 @@ import javax.swing.text.BadLocationException;
 import javax.swing.text.DocumentFilter;
 import javax.swing.text.AbstractDocument;
 import java.awt.*;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import util.SoundManager;
 
 public class StartPanel extends JPanel {
 
@@ -72,10 +75,17 @@ public class StartPanel extends JPanel {
 
         p1Field = new NeonInputField("PLAYER 1", new Color(255, 80, 80));
         p2Field = new NeonInputField("PLAYER 2", new Color(80, 180, 255));
+
         applyCharacterLimit(p1Field.textField, 15);
         applyCharacterLimit(p2Field.textField, 15);
+
+// typing sound per letter
+        addTypingSound(p1Field.textField);
+        addTypingSound(p2Field.textField);
+
         bg.add(p1Field);
         bg.add(p2Field);
+
 
         tEasy = new IconToggleButton("/ui/start/easy_btn.png", colorEasy);
         tMed = new IconToggleButton("/ui/start/medium_btn.png", colorMed);
@@ -311,4 +321,24 @@ public class StartPanel extends JPanel {
         revalidate();
         repaint();
     }
+
+
+    private void addTypingSound(JTextField tf) {
+        tf.getDocument().addDocumentListener(new DocumentListener() {
+
+            private long last = 0;
+
+            private void ping() {
+                long now = System.currentTimeMillis();
+                if (now - last < 50) return; // throttle (ms)
+                last = now;
+                SoundManager.typeKey();
+            }
+
+            @Override public void insertUpdate(DocumentEvent e) { ping(); }
+            @Override public void removeUpdate(DocumentEvent e) { } // no sound on delete
+            @Override public void changedUpdate(DocumentEvent e) { }
+        });
+    }
+
 }
