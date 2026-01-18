@@ -29,6 +29,8 @@ public final class SoundManager {
     private static final float EXIT_DIALOG_VOLUME_DB = -7.0f;
     private static Clip cellClickClip;
     private static final float CELL_CLICK_VOLUME_DB = -18.0f; // quiet
+    private static Clip typeClip;
+    private static final float TYPE_VOLUME_DB = -20.0f; // quiet typing
 
     private SoundManager() {
     }
@@ -58,6 +60,8 @@ public final class SoundManager {
 
         exitDialogClip = loadClip("/audio/exit_dialog.wav");
         setVolume(exitDialogClip, EXIT_DIALOG_VOLUME_DB);
+        typeClip = loadClip("/audio/key_type.wav");
+        setVolume(typeClip, TYPE_VOLUME_DB);
 
 
     }
@@ -187,6 +191,10 @@ public final class SoundManager {
     public static void cellClick() {
         if (muted) return;
         play(cellClickClip);
+    }
+    public static void typeKey() {
+        if (muted) return;
+        play(typeClip);
     }
 
 
